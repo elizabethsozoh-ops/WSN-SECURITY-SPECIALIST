@@ -12,12 +12,12 @@ async function loadConfig() {
   // For now, return a mock config since we haven't set up Firebase yet
   const config = {
     firebase: {
-      apiKey: "DEMO-MODE",
-      authDomain: "wsn-guardian.firebaseapp.com",
-      projectId: "wsn-guardian",
-      storageBucket: "wsn-guardian.appspot.com",
-      messagingSenderId: "000000000000",
-      appId: "1:000000000000:web:0000000000000000"
+      apiKey: "AIzaSyA6AIIR937YDXSPh8eQYPZnx8ngycTdeSw",
+      authDomain: "wsn-guardian-app-2025.firebaseapp.com",
+      projectId: "wsn-guardian-app-2025",
+      storageBucket: "wsn-guardian-app-2025.firebasestorage.app",
+      messagingSenderId: "294038320624",
+      appId: "1:294038320624:web:8857fb0d5c8dbf30ea1935"
     },
     defaultCompany: {
       companyId: "sss-security",
@@ -38,7 +38,7 @@ async function loadConfig() {
       }
     }
   };
-  
+
   firebaseConfig = config.firebase;
   companyConfig = config.defaultCompany;
   return config;
@@ -49,17 +49,17 @@ let app, auth, db, messaging;
 
 async function initFirebase() {
   const config = await loadConfig();
-  
+
   app = initializeApp(config.firebase);
   auth = getAuth(app);
   db = getFirestore(app);
-  
+
   try {
     messaging = getMessaging(app);
   } catch (error) {
     console.warn('Firebase Messaging not available:', error);
   }
-  
+
   return { app, auth, db, messaging };
 }
 
@@ -77,7 +77,7 @@ async function registerUser(email, password, userData) {
   try {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
-    
+
     // Create user document in Firestore
     await addDoc(collection(db, 'users'), {
       userId: user.uid,
@@ -94,7 +94,7 @@ async function registerUser(email, password, userData) {
       updatedAt: serverTimestamp(),
       lastLogin: serverTimestamp()
     });
-    
+
     return { success: true, user };
   } catch (error) {
     return { success: false, error: error.message };
@@ -119,10 +119,10 @@ async function createIncident(incidentData) {
   try {
     const user = auth.currentUser;
     if (!user) throw new Error('User not authenticated');
-    
+
     // Get user's current location
     const location = await getCurrentLocation();
-    
+
     const incident = {
       companyId: companyConfig.companyId,
       userId: user.uid,
@@ -151,12 +151,12 @@ async function createIncident(incidentData) {
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     };
-    
+
     const docRef = await addDoc(collection(db, 'incidents'), incident);
-    
+
     // Send notification to control room
     await notifyControlRoom(docRef.id, incident);
-    
+
     return { success: true, incidentId: docRef.id };
   } catch (error) {
     return { success: false, error: error.message };
@@ -167,7 +167,7 @@ async function getIncidentById(incidentId) {
   try {
     const docRef = doc(db, 'incidents', incidentId);
     const docSnap = await getDoc(docRef);
-    
+
     if (docSnap.exists()) {
       return { success: true, incident: { id: docSnap.id, ...docSnap.data() } };
     } else {
@@ -185,14 +185,14 @@ async function getUserIncidents(userId) {
       where('userId', '==', userId),
       orderBy('createdAt', 'desc')
     );
-    
+
     const querySnapshot = await getDocs(q);
     const incidents = [];
-    
+
     querySnapshot.forEach((doc) => {
       incidents.push({ id: doc.id, ...doc.data() });
     });
-    
+
     return { success: true, incidents };
   } catch (error) {
     return { success: false, error: error.message };
@@ -215,7 +215,7 @@ function getCurrentLocation() {
       reject(new Error('Geolocation not supported'));
       return;
     }
-    
+
     navigator.geolocation.getCurrentPosition(
       (position) => {
         resolve({
@@ -245,7 +245,7 @@ async function reverseGeocode(lat, lng) {
 // Notification functions
 async function requestNotificationPermission() {
   if (!messaging) return { success: false, error: 'Messaging not available' };
-  
+
   try {
     const permission = await Notification.requestPermission();
     if (permission === 'granted') {
@@ -263,7 +263,7 @@ async function requestNotificationPermission() {
 
 function onNotificationReceived(callback) {
   if (!messaging) return;
-  
+
   onMessage(messaging, (payload) => {
     callback(payload);
   });
@@ -280,7 +280,7 @@ async function getUserProfile(userId) {
   try {
     const q = query(collection(db, 'users'), where('userId', '==', userId));
     const querySnapshot = await getDocs(q);
-    
+
     if (!querySnapshot.empty) {
       const doc = querySnapshot.docs[0];
       return { success: true, profile: { id: doc.id, ...doc.data() } };
@@ -296,7 +296,7 @@ async function updateUserProfile(userId, updates) {
   try {
     const q = query(collection(db, 'users'), where('userId', '==', userId));
     const querySnapshot = await getDocs(q);
-    
+
     if (!querySnapshot.empty) {
       const docRef = querySnapshot.docs[0].ref;
       await updateDoc(docRef, {

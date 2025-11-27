@@ -290,23 +290,51 @@ p {
 }
 
 .btn-panic {
-  background: linear-gradient(135deg, #B91C1C 0%, var(--color-panic) 50%, #F87171 100%);
+  background-color: var(--color-panic);
   color: var(--color-white);
+  border-bottom: 4px solid #b91c1c;
+}
+
+.btn-panic:active {
+  background-color: #b91c1c;
+  border-bottom-width: 0;
+  margin-top: 4px;
 }
 
 .btn-medical {
-  background: linear-gradient(135deg, #1E40AF 0%, var(--color-medical) 50%, #60A5FA 100%);
+  background-color: var(--color-medical);
   color: var(--color-white);
+  border-bottom: 4px solid #1e40af;
+}
+
+.btn-medical:active {
+  background-color: #1e40af;
+  border-bottom-width: 0;
+  margin-top: 4px;
 }
 
 .btn-fire {
-  background: linear-gradient(135deg, #C2410C 0%, var(--color-fire) 50%, #FB923C 100%);
+  background-color: var(--color-fire);
   color: var(--color-white);
+  border-bottom: 4px solid #c2410c;
+}
+
+.btn-fire:active {
+  background-color: #c2410c;
+  border-bottom-width: 0;
+  margin-top: 4px;
 }
 
 .btn-technical {
-  background: var(--gradient-bronze);
+  background-color: var(--color-bronze);
   color: var(--color-black);
+  border-bottom: 4px solid #b8941f;
+}
+
+.btn-technical:active {
+  background-color: #b8941f;
+  border-bottom-width: 0;
+  margin-top: 4px;
 }
 
 .btn-full {
@@ -363,58 +391,60 @@ p {
 
 /* Emergency Button Grid */
 .emergency-grid {
-  display: grid;
-  grid-template-columns: 1fr;
+  display: flex;
+  flex-direction: column;
   gap: var(--spacing-md);
   margin: var(--spacing-lg) 0;
 }
 
 .emergency-button {
+  background: linear-gradient(135deg, var(--color-black-light) 0%, var(--color-black-lighter) 100%);
+  border: 1px solid var(--color-bronze);
+  box-shadow: var(--shadow-bronze);
   position: relative;
-  padding: var(--spacing-xl);
+  padding: var(--spacing-md);
   border-radius: var(--radius-lg);
-  border: none;
   cursor: pointer;
-  transition: all var(--transition-base);
+  transition: all var(--transition-fast);
   overflow: hidden;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  gap: var(--spacing-sm);
+  justify-content: space-between;
 }
 
-.emergency-button::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(135deg, transparent 0%, rgba(255, 255, 255, 0.1) 100%);
-  opacity: 0;
-  transition: opacity var(--transition-base);
-}
-
-.emergency-button:hover::after {
-  opacity: 1;
+.emergency-button:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-glow);
+  border-color: var(--color-bronze-light);
 }
 
 .emergency-icon {
-  font-size: 4rem;
+  width: 80px;
+  height: 80px;
   filter: drop-shadow(var(--shadow-md));
+}
+
+.emergency-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
 }
 
 .emergency-label {
   font-family: var(--font-display);
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 1px;
+  color: var(--color-silver-light);
 }
 
 .emergency-sublabel {
   font-size: 0.875rem;
   opacity: 0.9;
+  color: var(--color-silver);
 }
 
 /* Status Badge */

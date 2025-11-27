@@ -1,0 +1,10 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // TEMPORARY: Allow public access for testing
+    // We will lock this down after you see the connection working
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}

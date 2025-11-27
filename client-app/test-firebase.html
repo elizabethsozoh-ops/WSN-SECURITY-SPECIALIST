@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Firebase Connection Test</title>
+  <style>
+    body {
+      font-family: monospace;
+      background: #1a1a1a;
+      color: #fff;
+      padding: 20px;
+    }
+    .log {
+      background: #000;
+      padding: 10px;
+      margin: 10px 0;
+      border-left: 3px solid #D4AF37;
+    }
+    .error { border-left-color: #ff0000; }
+    .success { border-left-color: #00ff00; }
+    button {
+      background: #D4AF37;
+      color: #000;
+      border: none;
+      padding: 10px 20px;
+      margin: 5px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    input {
+      padding: 10px;
+      margin: 5px;
+      width: 300px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔥 Firebase Connection Test</h1>
+
+  <div id="status"></div>
+
+  <h2>Test Login</h2>
+  <input type="email" id="email" placeholder="Email" value="elizabethsozoh@gmail.com">
+  <input type="password" id="password" placeholder="Password">
+  <button onclick="testLogin()">Test Login</button>
+  <button onclick="testAuth()">Test Auth Only</button>
+  <button onclick="checkUser()">Check User Doc</button>
+
+  <div id="logs"></div>
+
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+    import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+    import { getFirestore, doc, getDoc, collection, getDocs, query, where } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCqIFBd6sq46cjCCjJ2L5QXVaEsvbuGKi8",
+      authDomain: "wsn-guardian.firebaseapp.com",
+      projectId: "wsn-guardian",
+      storageBucket: "wsn-guardian.firebasestorage.app",
+      messagingSenderId: "867816848580",
+      appId: "1:867816848580:web:a356aa5d456d287feb9d91"
+    };
+
+    let app, auth, db;
+
+    function log(message, type = 'log') {
+      console.log(message);
+      const div = document.createElement('div');
+      div.className = `log ${type}`;
+      div.textContent = typeof message === 'object' ? JSON.stringify(message, null, 2) : message;
+      document.getElementById('logs').appendChild(div);
+    }
+
+    try {
+      log('🔥 Initializing Firebase...');
+      app = initializeApp(firebaseConfig);
+      auth = getAuth(app);
+      db = getFirestore(app);
+      log('✅ Firebase initialized successfully', 'success');
+
+      document.getElementById('status').innerHTML = '<div class="log success">✅ Firebase Connected</div>';
+
+      onAuthStateChanged(auth, (user) => {
+        if (user) {
+          log(`✅ Auth state: Logged in as ${user.email}`, 'success');
+          log(`User ID: ${user.uid}`);
+        } else {
+          log('ℹ️ Auth state: Not logged in');
+        }
+      });
+
+    } catch (error) {
+      log(`❌ Firebase initialization error: ${error.message}`, 'error');
+      document.getElementById('status').innerHTML = '<div class="log error">❌ Firebase Connection Failed</div>';
+    }
+
+    window.testLogin = async function() {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+
+      log(`\n🔐 Attempting login: ${email}`);
+
+      try {
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        log('✅ Login successful!', 'success');
+        log(`User: ${userCredential.user.email}`);
+        log(`UID: ${userCredential.user.uid}`);
+
+        // Try to get user document
+        log('\n📄 Checking Firestore user document...');
+        const userId = userCredential.user.uid;
+
+        // Method 1: Direct lookup by UID
+        log(`Trying: doc(db, 'users', '${userId}')`);
+        const userDocRef = doc(db, 'users', userId);
+        const userDoc = await getDoc(userDocRef);
+
+        if (userDoc.exists()) {
+          log('✅ User document found (by UID)!', 'success');
+          log(userDoc.data());
+        } else {
+          log('⚠️ User document NOT found by UID');
+
+          // Method 2: Query by userId field
+          log(`Trying: query where userId == '${userId}'`);
+          const q = query(collection(db, 'users'), where('userId', '==', userId));
+          const querySnapshot = await getDocs(q);
+
+          if (!querySnapshot.empty) {
+            log('✅ User document found (by query)!', 'success');
+            querySnapshot.forEach((doc) => {
+              log(`Doc ID: ${doc.id}`);
+              log(doc.data());
+            });
+          } else {
+            log('❌ User document NOT found anywhere', 'error');
+          }
+        }
+
+      } catch (error) {
+        log(`❌ Login error: ${error.code}`, 'error');
+        log(`Message: ${error.message}`, 'error');
+      }
+    };
+
+    window.testAuth = async function() {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+
+      log(`\n🔐 Testing authentication only: ${email}`);
+
+      try {
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        log('✅ Authentication successful!', 'success');
+        log(`User ID: ${userCredential.user.uid}`);
+        log(`Email: ${userCredential.user.email}`);
+      } catch (error) {
+        log(`❌ Auth error: ${error.code}`, 'error');
+        log(`Message: ${error.message}`, 'error');
+      }
+    };
+
+    window.checkUser = async function() {
+      if (!auth.currentUser) {
+        log('❌ No user logged in. Click "Test Login" first.', 'error');
+        return;
+      }
+
+      const userId = auth.currentUser.uid;
+      log(`\n📄 Checking user document for UID: ${userId}`);
+
+      try {
+        // List all documents in users collection
+        log('📋 Listing all documents in users collection...');
+        const usersSnapshot = await getDocs(collection(db, 'users'));
+        log(`Found ${usersSnapshot.size} documents in users collection`);
+
+        usersSnapshot.forEach((doc) => {
+          log(`\nDoc ID: ${doc.id}`);
+          const data = doc.data();
+          log(`Email: ${data.email || 'N/A'}`);
+          log(`Role: ${data.role || 'N/A'}`);
+          if (data.profile) {
+            log(`Name: ${data.profile.firstName} ${data.profile.lastName}`);
+          }
+        });
+      } catch (error) {
+        log(`❌ Error checking users: ${error.message}`, 'error');
+      }
+    };
+
+    // Make objects available globally for debugging
+    window.auth = auth;
+    window.db = db;
+    window.log = log;
+  </script>
+</body>
+</html>

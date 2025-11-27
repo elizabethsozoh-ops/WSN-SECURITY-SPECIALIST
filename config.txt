@@ -1,0 +1,10 @@
+{
+  "projectId": "wsn-guardian-app-2025",
+  "appId": "1:294038320624:web:8857fb0d5c8dbf30ea1935",
+  "storageBucket": "wsn-guardian-app-2025.firebasestorage.app",
+  "apiKey": "AIzaSyA6AIIR937YDXSPh8eQYPZnx8ngycTdeSw",
+  "authDomain": "wsn-guardian-app-2025.firebaseapp.com",
+  "messagingSenderId": "294038320624",
+  "projectNumber": "294038320624",
+  "version": "2"
+}

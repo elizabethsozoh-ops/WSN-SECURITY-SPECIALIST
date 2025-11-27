@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>abc security - Client Portal</title>
+  <!-- Loading Screen -->
+  <div id="loadingScreen" class="loading-overlay">
+    <div class="spinner"></div>
+    <p class="mt-md text-silver">Loading...</p>
+  </div>
+
+  <!-- Login Screen -->
+  <div class="container hidden" id="loginScreen">
+    <div class="app-header">
+      <h1 class="app-title">abc security</h1>
+      <p class="app-tagline">Client Portal</p>
+    </div>
+
+    <div class="card card-metallic">
+      <h2 class="text-center mb-md">Secure Login</h2>
+
+      <form id="loginForm">
+        <div class="form-group">
+          <label for="loginEmail" class="form-label">Email Address</label>
+          <input type="email" id="loginEmail" class="form-input" placeholder="your@email.com" required>
+        </div>
+
+        <div class="form-group">
+          <label for="loginPassword" class="form-label">Password</label>
+          <input type="password" id="loginPassword" class="form-input" placeholder="••••••••" required>
+        </div>
+
+        <div id="loginError" class="text-error text-center mb-sm hidden"></div>
+
+        <button type="submit" class="btn btn-primary btn-full btn-lg">
+          🔐 Secure Login
+        </button>
+      </form>
+
+      <div class="text-center mt-md">
+        <p class="text-silver">First time user?</p>
+        <button class="btn btn-secondary mt-sm" id="showRegisterBtn">
+          Create Account
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Registration Screen -->
+  <div class="container hidden" id="registerScreen">
+    <div class="app-header">
+      <h1 class="app-title">Create Account</h1>
+      <p class="app-tagline">Join abc security</p>
+    </div>
+
+    <div class="card card-metallic">
+      <form id="registerForm">
+        <div class="form-group">
+          <label for="regFirstName" class="form-label">First Name</label>
+          <input type="text" id="regFirstName" class="form-input" placeholder="John" required>
+        </div>
+
+        <div class="form-group">
+          <label for="regLastName" class="form-label">Last Name</label>
+          <input type="text" id="regLastName" class="form-input" placeholder="Doe" required>
+        </div>
+
+        <div class="form-group">
+          <label for="regEmail" class="form-label">Email Address</label>
+          <input type="email" id="regEmail" class="form-input" placeholder="your@email.com" required>
+        </div>
+
+        <div class="form-group">
+          <label for="regAccountNumber" class="form-label">Client Account Number (Optional)</label>
+          <input type="text" id="regAccountNumber" class="form-input" placeholder="e.g. WSN-12345">
+        </div>
+
+        <div class="form-group">
+          <label for="regPhone" class="form-label">Phone Number</label>
+          <input type="tel" id="regPhone" class="form-input" placeholder="+27 82 123 4567" required>
+        </div>
+
+        <div class="form-group">
+          <label for="regPassword" class="form-label">Create Password</label>
+          <input type="password" id="regPassword" class="form-input" placeholder="••••••••" required>
+        </div>
+
+        <div id="registerError" class="text-error text-center mb-sm hidden"></div>
+
+        <button type="submit" class="btn btn-primary btn-full btn-lg">
+          ✓ Create Account
+        </button>
+      </form>
+
+      <div class="text-center mt-md">
+        <button class="btn btn-secondary" id="showLoginBtn">
+          ← Back to Login
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dashboard Screen -->
+  <div class="container hidden" id="dashboardScreen">
+    <div class="app-header flex justify-between align-center">
+      <div>
+        <h1 class="app-title" style="font-size: 1.5rem;">abc security</h1>
+        <p class="app-tagline" id="welcomeMessage">Welcome</p>
+      </div>
+      <button id="logoutBtn" class="btn btn-sm btn-secondary" style="padding: 0.5rem;">Logout</button>
+    </div>
+
+    <div class="card card-metallic">
+      <div class="text-center mb-md">
+        <h3 class="text-bronze mb-sm">EMERGENCY RESPONSE</h3>
+        <p class="text-silver text-sm">Tap below for immediate assistance</p>
+      </div>
+
+      <div class="grid gap-md">
+        <button class="emergency-button btn-panic" data-type="panic">
+          <span class="emergency-icon"><img src="images/armed-response.png" alt="Panic"></span>
+          <div class="emergency-text">
+            <span class="emergency-label">Panic</span>
+            <span class="emergency-sublabel">Immediate Dispatch</span>
+          </div>
+        </button>
+
+        <button class="emergency-button btn-medical" data-type="medical">
+          <span class="emergency-icon"><img src="images/medical.png" alt="Medical Assistance"></span>
+          <div class="emergency-text">
+            <span class="emergency-label">Medical Assistance</span>
+            <span class="emergency-sublabel">Paramedic Response</span>
+          </div>
+        </button>
+
+        <button class="emergency-button btn-fire" data-type="fire">
+          <span class="emergency-icon"><img src="images/fire.png" alt="Fire & Rescue"></span>
+          <div class="emergency-text">
+            <span class="emergency-label">Fire & Rescue</span>
+            <span class="emergency-sublabel">Fire Department</span>
+          </div>
+        </button>
+
+        <button class="emergency-button btn-technical" data-type="technical">
+          <span class="emergency-icon"><img src="images/technical.png" alt="Technical Department"></span>
+          <div class="emergency-text">
+            <span class="emergency-label">Technical Department</span>
+            <span class="emergency-sublabel">Non-Emergency</span>
+          </div>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Incident Screen -->
+  <div class="container hidden" id="incidentScreen">
+    <div class="app-header">
+      <h2 class="text-center">🚨 Emergency Active</h2>
+    </div>
+    <div class="card card-metallic">
+      <h3 class="text-center mb-md" id="incidentType">Armed Response</h3>
+      <div class="incident-info">
+        <div class="info-row">
+          <span class="info-label">Incident ID:</span>
+          <span class="info-value" id="incidentId">Loading...</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Status:</span>
+          <span class="info-value" id="incidentStatusText">Pending</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- History Screen -->
+  <div class="container hidden" id="historyScreen">
+    <div class="app-header">
+      <h1 class="app-title" style="font-size: 1.5rem;">Incident History</h1>
+    </div>
+    <div id="historyList" class="flex flex-column gap-md">
+      <p class="text-center text-silver">Loading history...</p>
+    </div>
+  </div>
+
+  <!-- Profile Screen -->
+  <div class="container hidden" id="profileScreen">
+    <div class="app-header">
+      <h1 class="app-title" style="font-size: 1.5rem;">My Profile</h1>
+    </div>
+    <div class="card card-metallic">
+      <div class="form-group">
+        <label class="form-label">Name</label>
+        <input type="text" id="profileName" class="form-input" readonly>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Phone</label>
+        <input type="text" id="profilePhone" class="form-input" readonly>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input type="text" id="profileEmail" class="form-input" readonly>
+      </div>
+    </div>
+  </div>
+  </div>
+
+  <!-- Emergency fallback -->
+  <script>
+    window.appInitialized = false;
+    setTimeout(function () {
+      if (!window.appInitialized) {
+        var loading = document.getElementById('loadingScreen');
+        var login = document.getElementById('loginScreen');
+        if (loading && !loading.classList.contains('hidden')) {
+          console.warn('Emergency fallback activated');
+          loading.style.display = 'none';
+          if (login) login.classList.remove('hidden');
+        }
+      }
+    }, 5000);
+  </script>
+
+  <script type="module" src="js/app.js"></script>
+  </body>
+
+</html>

@@ -5,12 +5,12 @@ import { getFirestore, collection, addDoc, setDoc, doc, getDoc, getDocs, query, 
 
 // Firebase Configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyA6AIIR937YDXSPh8eQYPZnx8ngycTdeSw",
-  authDomain: "wsn-guardian-app-2025.firebaseapp.com",
-  projectId: "wsn-guardian-app-2025",
-  storageBucket: "wsn-guardian-app-2025.firebasestorage.app",
-  messagingSenderId: "294038320624",
-  appId: "1:294038320624:web:8857fb0d5c8dbf30ea1935"
+  apiKey: "AIzaSyCqIFBd6sq46cjCCjJ2L5QXVaEsvbuGKi8",
+  authDomain: "wsn-guardian.firebaseapp.com",
+  projectId: "wsn-guardian",
+  storageBucket: "wsn-guardian.firebasestorage.app",
+  messagingSenderId: "867816848580",
+  appId: "1:867816848580:web:a356aa5d456d287feb9d91"
 };
 
 // Initialize Firebase
@@ -379,8 +379,11 @@ async function handleEmergencyButton(e) {
   try {
     showLoading();
 
-    // Get current location
+    // Get current location (REAL-TIME GPS)
     const location = await getCurrentLocation();
+
+    // Get address from GPS coordinates using reverse geocoding
+    const addressFromGPS = await reverseGeocodeLocation(location.latitude, location.longitude);
 
     // Get user data
     let userData = { profile: {} };
@@ -427,7 +430,7 @@ async function handleEmergencyButton(e) {
           lng: location.longitude,
           accuracy: location.accuracy
         },
-        address: userData.profile?.address || 'Unknown',
+        address: addressFromGPS,
         timestamp: serverTimestamp()
       },
       timeline: [{
@@ -610,6 +613,38 @@ function getCurrentLocation() {
       }
     );
   });
+}
+
+// Reverse Geocoding - Convert GPS coordinates to address
+async function reverseGeocodeLocation(lat, lng) {
+  try {
+    // Use OpenStreetMap Nominatim API for reverse geocoding (free, no API key needed)
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+      {
+        headers: {
+          'User-Agent': 'WSN-Guardian-Emergency-Response-App'
+        }
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error('Geocoding failed');
+    }
+
+    const data = await response.json();
+
+    if (data && data.display_name) {
+      return data.display_name;
+    } else {
+      // Fallback to coordinates if address not found
+      return `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+    }
+  } catch (error) {
+    console.error('Reverse geocoding error:', error);
+    // Fallback to coordinates
+    return `GPS: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+  }
 }
 
 // Error Messages

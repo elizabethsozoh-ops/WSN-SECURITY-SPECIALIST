@@ -12,12 +12,12 @@ async function loadConfig() {
   // For now, return a mock config since we haven't set up Firebase yet
   const config = {
     firebase: {
-      apiKey: "AIzaSyA6AIIR937YDXSPh8eQYPZnx8ngycTdeSw",
-      authDomain: "wsn-guardian-app-2025.firebaseapp.com",
-      projectId: "wsn-guardian-app-2025",
-      storageBucket: "wsn-guardian-app-2025.firebasestorage.app",
-      messagingSenderId: "294038320624",
-      appId: "1:294038320624:web:8857fb0d5c8dbf30ea1935"
+      apiKey: "AIzaSyCqIFBd6sq46cjCCjJ2L5QXVaEsvbuGKi8",
+      authDomain: "wsn-guardian.firebaseapp.com",
+      projectId: "wsn-guardian",
+      storageBucket: "wsn-guardian.firebasestorage.app",
+      messagingSenderId: "867816848580",
+      appId: "1:867816848580:web:a356aa5d456d287feb9d91"
     },
     defaultCompany: {
       companyId: "sss-security",

@@ -9,7 +9,7 @@ This is because Firestore security rules are blocking the client app from creati
 ## Step 1: Check Current Security Rules
 
 1. Go to [Firebase Console](https://console.firebase.google.com/)
-2. Select your project: **wsn-guardian**
+2. Select your project: **wsn-guardian-app-2025**
 3. Click **Firestore Database** in the left sidebar
 4. Click the **Rules** tab at the top
 5. You should see your current security rules

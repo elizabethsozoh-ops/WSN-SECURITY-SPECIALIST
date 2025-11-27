@@ -354,9 +354,10 @@
             <div class="logo-main" style="font-size: 1.5rem; margin-bottom: 10px;">ABS SECURITY</div>
             <div class="logo-sub" style="margin-bottom: 30px;">Control Room Access</div>
 
-            <input type="password" id="adminPin" class="login-input" placeholder="Enter Access PIN"
-                onkeyup="checkPin(event)">
-            <button class="btn btn-primary" style="width: 100%" onclick="attemptLogin()">Authenticate</button>
+            <input type="email" id="adminEmail" class="login-input" placeholder="Admin Email Address">
+            <input type="password" id="adminPassword" class="login-input" placeholder="Password"
+                onkeyup="checkEnter(event)">
+            <button class="btn btn-primary" style="width: 100%" onclick="attemptLogin()">Control Room Sign In</button>
             <p id="loginError" style="color: var(--color-danger); margin-top: 15px; font-size: 0.9rem; display: none;">
                 Access Denied</p>
         </div>
@@ -392,16 +393,17 @@
     <!-- Firebase Logic -->
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
         import { getFirestore, collection, query, where, orderBy, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
         // Firebase Config
         const firebaseConfig = {
-            apiKey: "AIzaSyA6AIIR937YDXSPh8eQYPZnx8ngycTdeSw",
-            authDomain: "wsn-guardian-app-2025.firebaseapp.com",
-            projectId: "wsn-guardian-app-2025",
-            storageBucket: "wsn-guardian-app-2025.firebasestorage.app",
-            messagingSenderId: "294038320624",
-            appId: "1:294038320624:web:8857fb0d5c8dbf30ea1935"
+            apiKey: "AIzaSyCqIFBd6sq46cjCCjJ2L5QXVaEsvbuGKi8",
+            authDomain: "wsn-guardian.firebaseapp.com",
+            projectId: "wsn-guardian",
+            storageBucket: "wsn-guardian.firebasestorage.app",
+            messagingSenderId: "867816848580",
+            appId: "1:867816848580:web:a356aa5d456d287feb9d91"
         };
 
         // Initialize Map
@@ -449,39 +451,57 @@
         const markers = {};
 
         // Initialize Firebase
-        try {
-            const app = initializeApp(firebaseConfig);
-            const db = getFirestore(app);
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
 
-            // Listen for active incidents
+        // Start listening for incidents only after authentication
+        function startIncidentListener() {
+
+            // Listen for all incidents (we'll filter in code)
             const q = query(
                 collection(db, 'incidents'),
-                where('status', 'in', ['pending', 'dispatched']),
                 orderBy('createdAt', 'desc')
             );
 
             onSnapshot(q, (snapshot) => {
+                console.log('📡 Received snapshot with', snapshot.size, 'incidents');
+
                 snapshot.docChanges().forEach((change) => {
                     const incident = { id: change.doc.id, ...change.doc.data() };
 
-                    if (change.type === 'added') {
+                    console.log('Incident change:', change.type, incident);
+
+                    // Only show active incidents (pending, dispatched)
+                    const isActive = incident.status === 'pending' || incident.status === 'dispatched';
+
+                    if (change.type === 'added' && isActive) {
                         addIncident(incident);
                     }
                     if (change.type === 'modified') {
-                        updateIncident(incident);
+                        if (isActive) {
+                            updateIncident(incident);
+                        } else {
+                            // Incident was resolved/cancelled, remove it
+                            removeIncident(incident.id);
+                        }
                     }
                     if (change.type === 'removed') {
                         removeIncident(incident.id);
                     }
                 });
+
+                // Update connection status
+                document.getElementById('connectionStatus').textContent = 'System Online • Monitoring Active';
+                document.getElementById('connectionStatus').style.color = '';
             }, (error) => {
-                console.error('Listener error:', error);
-                document.getElementById('connectionStatus').textContent = 'Connection Lost';
+                console.error('❌ Listener error:', error);
+                console.error('Error code:', error.code);
+                console.error('Error message:', error.message);
+
+                document.getElementById('connectionStatus').textContent = 'Connection Lost: ' + error.code;
                 document.getElementById('connectionStatus').style.color = '#ff3b30';
             });
-
-        } catch (error) {
-            console.error('Firebase init error:', error);
         }
 
         // UI Functions
@@ -588,23 +608,49 @@
         };
 
         // Login Logic
-        window.checkPin = (e) => {
+        window.checkEnter = (e) => {
             if (e.key === 'Enter') window.attemptLogin();
         };
 
-        window.attemptLogin = () => {
-            const pin = document.getElementById('adminPin').value;
-            // Simple hardcoded PIN for demo - in production use Firebase Auth
-            if (pin === '1234' || pin === 'admin') {
+        window.attemptLogin = async () => {
+            const email = document.getElementById('adminEmail').value;
+            const password = document.getElementById('adminPassword').value;
+            const errorElement = document.getElementById('loginError');
+
+            if (!email || !password) {
+                errorElement.textContent = 'Please enter email and password';
+                errorElement.style.display = 'block';
+                return;
+            }
+
+            try {
+                errorElement.style.display = 'none';
+                await signInWithEmailAndPassword(auth, email, password);
+                // onAuthStateChanged will handle the rest
+            } catch (error) {
+                console.error('Login error:', error);
+                errorElement.textContent = 'Access Denied: ' + error.message;
+                errorElement.style.display = 'block';
+            }
+        };
+
+        // Auth state observer
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                console.log('✅ Authenticated as:', user.email);
                 const overlay = document.getElementById('loginOverlay');
                 overlay.style.opacity = '0';
                 setTimeout(() => overlay.style.display = 'none', 500);
+
+                // Start listening to incidents
+                startIncidentListener();
             } else {
-                const error = document.getElementById('loginError');
-                error.style.display = 'block';
-                document.getElementById('adminPin').value = '';
+                console.log('❌ Not authenticated');
+                document.getElementById('loginOverlay').style.display = 'flex';
+                document.getElementById('connectionStatus').textContent = 'Not Authenticated';
+                document.getElementById('connectionStatus').style.color = '#ff3b30';
             }
-        };
+        });
 
     </script>
 </body>

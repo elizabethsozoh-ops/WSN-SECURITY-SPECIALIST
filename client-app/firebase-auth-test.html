@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Firebase Auth Diagnostic</title>
+  <style>
+    body {
+      font-family: monospace;
+      background: #1a1a1a;
+      color: #fff;
+      padding: 20px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .status {
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 8px;
+      border-left: 4px solid #D4AF37;
+    }
+    .success { border-left-color: #00ff00; background: #001100; }
+    .error { border-left-color: #ff0000; background: #110000; }
+    .info { border-left-color: #0088ff; background: #001122; }
+    button {
+      background: #D4AF37;
+      color: #000;
+      border: none;
+      padding: 12px 24px;
+      margin: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      border-radius: 4px;
+    }
+    button:hover { background: #c09e2f; }
+    input {
+      padding: 10px;
+      margin: 5px;
+      width: 100%;
+      max-width: 400px;
+      font-size: 14px;
+      background: #000;
+      border: 1px solid #D4AF37;
+      color: #fff;
+    }
+    .log-container {
+      background: #000;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 20px 0;
+      max-height: 500px;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔥 Firebase Authentication Diagnostic</h1>
+  <p>Project: <strong>wsn-guardian-app-2025</strong></p>
+
+  <div id="firebaseStatus" class="status info">Initializing Firebase...</div>
+
+  <div class="log-container" id="logs"></div>
+
+  <h2>Test Login</h2>
+  <div>
+    <input type="email" id="email" placeholder="Email" value="">
+    <input type="password" id="password" placeholder="Password">
+    <button onclick="testLogin()">🔐 Test Login</button>
+    <button onclick="testRegister()">➕ Test Register</button>
+    <button onclick="checkAuthMethods()">🔍 Check Auth Methods</button>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, fetchSignInMethodsForEmail } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+    import { getFirestore, doc, setDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyA6AIIR937YDXSPh8eQYPZnx8ngycTdeSw",
+      authDomain: "wsn-guardian-app-2025.firebaseapp.com",
+      projectId: "wsn-guardian-app-2025",
+      storageBucket: "wsn-guardian-app-2025.firebasestorage.app",
+      messagingSenderId: "294038320624",
+      appId: "1:294038320624:web:8857fb0d5c8dbf30ea1935"
+    };
+
+    let app, auth, db;
+
+    function log(message, type = 'info') {
+      console.log(message);
+      const div = document.createElement('div');
+      div.className = `status ${type}`;
+
+      if (typeof message === 'object') {
+        div.innerHTML = '<pre>' + JSON.stringify(message, null, 2) + '</pre>';
+      } else {
+        div.textContent = message;
+      }
+
+      document.getElementById('logs').appendChild(div);
+      document.getElementById('logs').scrollTop = document.getElementById('logs').scrollHeight;
+    }
+
+    try {
+      log('🔥 Initializing Firebase...', 'info');
+      app = initializeApp(firebaseConfig);
+      auth = getAuth(app);
+      db = getFirestore(app);
+
+      log('✅ Firebase initialized successfully!', 'success');
+      log('Project: ' + firebaseConfig.projectId, 'success');
+      log('Auth Domain: ' + firebaseConfig.authDomain, 'success');
+
+      document.getElementById('firebaseStatus').className = 'status success';
+      document.getElementById('firebaseStatus').textContent = '✅ Firebase Connected';
+
+    } catch (error) {
+      log('❌ Firebase initialization failed!', 'error');
+      log('Error: ' + error.message, 'error');
+
+      document.getElementById('firebaseStatus').className = 'status error';
+      document.getElementById('firebaseStatus').textContent = '❌ Firebase Failed: ' + error.message;
+    }
+
+    window.testLogin = async function() {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+
+      if (!email || !password) {
+        log('⚠️ Please enter email and password', 'error');
+        return;
+      }
+
+      log(`\n🔐 Attempting login: ${email}`, 'info');
+
+      try {
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        log('✅ LOGIN SUCCESSFUL!', 'success');
+        log('User UID: ' + userCredential.user.uid, 'success');
+        log('Email: ' + userCredential.user.email, 'success');
+        log('Email Verified: ' + userCredential.user.emailVerified, 'success');
+
+      } catch (error) {
+        log('❌ LOGIN FAILED', 'error');
+        log('Error Code: ' + error.code, 'error');
+        log('Error Message: ' + error.message, 'error');
+
+        if (error.code === 'auth/user-not-found') {
+          log('💡 Solution: User does not exist. Try registering first.', 'info');
+        } else if (error.code === 'auth/wrong-password') {
+          log('💡 Solution: Password is incorrect.', 'info');
+        } else if (error.code === 'auth/invalid-credential') {
+          log('💡 Solution: Email or password is incorrect.', 'info');
+        } else if (error.code === 'auth/configuration-not-found') {
+          log('💡 Solution: Firebase Authentication is not enabled in Firebase Console.', 'info');
+          log('   Go to Firebase Console → Authentication → Get Started', 'info');
+        } else if (error.code === 'auth/api-key-not-valid') {
+          log('💡 Solution: API key is invalid. Check Firebase config.', 'info');
+        }
+      }
+    };
+
+    window.testRegister = async function() {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+
+      if (!email || !password) {
+        log('⚠️ Please enter email and password', 'error');
+        return;
+      }
+
+      if (password.length < 6) {
+        log('⚠️ Password must be at least 6 characters', 'error');
+        return;
+      }
+
+      log(`\n➕ Attempting registration: ${email}`, 'info');
+
+      try {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        log('✅ REGISTRATION SUCCESSFUL!', 'success');
+        log('User UID: ' + userCredential.user.uid, 'success');
+        log('Email: ' + userCredential.user.email, 'success');
+
+        // Create user profile in Firestore
+        log('Creating user profile in Firestore...', 'info');
+        await setDoc(doc(db, 'users', userCredential.user.uid), {
+          email: email,
+          profile: {
+            firstName: email.split('@')[0],
+            lastName: '',
+            phone: '',
+            address: ''
+          },
+          role: 'client',
+          companyId: 'wsn-group',
+          createdAt: serverTimestamp(),
+          lastLogin: serverTimestamp()
+        });
+
+        log('✅ User profile created in Firestore!', 'success');
+
+      } catch (error) {
+        log('❌ REGISTRATION FAILED', 'error');
+        log('Error Code: ' + error.code, 'error');
+        log('Error Message: ' + error.message, 'error');
+
+        if (error.code === 'auth/email-already-in-use') {
+          log('💡 Solution: This email is already registered. Try logging in instead.', 'info');
+        } else if (error.code === 'auth/weak-password') {
+          log('💡 Solution: Password is too weak. Use at least 6 characters.', 'info');
+        } else if (error.code === 'auth/invalid-email') {
+          log('💡 Solution: Email format is invalid.', 'info');
+        } else if (error.code === 'auth/configuration-not-found') {
+          log('💡 Solution: Firebase Authentication is not enabled.', 'info');
+          log('   1. Go to Firebase Console: https://console.firebase.google.com/', 'info');
+          log('   2. Select project: wsn-guardian-app-2025', 'info');
+          log('   3. Click Authentication in left sidebar', 'info');
+          log('   4. Click "Get Started" button', 'info');
+          log('   5. Enable "Email/Password" sign-in method', 'info');
+        }
+      }
+    };
+
+    window.checkAuthMethods = async function() {
+      const email = document.getElementById('email').value;
+
+      if (!email) {
+        log('⚠️ Please enter email to check', 'error');
+        return;
+      }
+
+      log(`\n🔍 Checking authentication methods for: ${email}`, 'info');
+
+      try {
+        const methods = await fetchSignInMethodsForEmail(auth, email);
+
+        if (methods.length > 0) {
+          log('✅ User exists!', 'success');
+          log('Sign-in methods: ' + methods.join(', '), 'success');
+        } else {
+          log('⚠️ User does not exist', 'info');
+          log('💡 You need to register this email first', 'info');
+        }
+
+      } catch (error) {
+        log('❌ Check failed', 'error');
+        log('Error: ' + error.message, 'error');
+      }
+    };
+
+    // Make objects available globally
+    window.auth = auth;
+    window.db = db;
+  </script>
+</body>
+</html>

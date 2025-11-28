@@ -351,7 +351,7 @@
     <!-- Login Overlay -->
     <div id="loginOverlay">
         <div class="login-box">
-            <div class="logo-main" style="font-size: 1.5rem; margin-bottom: 10px;">ABS SECURITY</div>
+            <div class="logo-main" style="font-size: 1.5rem; margin-bottom: 10px;">ABC SECURITY</div>
             <div class="logo-sub" style="margin-bottom: 30px;">Control Room Access</div>
 
             <input type="email" id="adminEmail" class="login-input" placeholder="Admin Email Address">
@@ -371,7 +371,7 @@
         <div class="sidebar">
             <div class="sidebar-header">
                 <div class="logo-container">
-                    <div class="logo-main">ABS SECURITY</div>
+                    <div class="logo-main">ABC SECURITY</div>
                     <div class="logo-sub">Powered by WSN GROUP</div>
                 </div>
                 <div class="status-bar">
@@ -384,6 +384,141 @@
                 <!-- Incidents will be injected here -->
             </div>
         </div>
+
+        <!-- ANALYTICS PANEL TOGGLE BUTTON - Positioned bottom-right to avoid map controls -->
+        <button id="analyticsToggle"
+            style="position: fixed; bottom: 30px; right: 30px; z-index: 1000; background: var(--color-primary); color: #000; border: none; padding: 15px 25px; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 1rem; pointer-events: auto; box-shadow: 0 4px 20px rgba(212,175,55,0.3);"
+            onclick="toggleAnalytics()">
+            📊 ANALYTICS & REPORTS
+        </button>
+    </div>
+
+    <!-- ANALYTICS SIDE PANEL -->
+    <div id="analyticsPanel"
+        style="position: fixed; top: 0; right: -500px; width: 500px; height: 100vh; background: var(--color-surface); backdrop-filter: blur(20px); border-left: var(--glass-border); z-index: 999; transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1); overflow-y: auto; padding: 30px; box-shadow: -20px 0 50px rgba(0,0,0,0.5);">
+
+        <div
+            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 2px solid var(--color-primary); padding-bottom: 15px;">
+            <h2 style="font-family: 'Outfit', sans-serif; color: var(--color-primary); font-size: 1.5rem; margin: 0;">
+                Analytics & Reports</h2>
+            <button onclick="toggleAnalytics()"
+                style="background: rgba(255,255,255,0.1); border: none; color: white; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 1rem;">✕
+                Close</button>
+        </div>
+
+        <!-- TABS -->
+        <div style="display: flex; gap: 10px; margin-bottom: 25px;">
+            <button onclick="switchTab('stats')" id="tabStats" class="analytics-tab"
+                style="flex: 1; padding: 10px; background: var(--color-primary); color: #000; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.85rem;">📊
+                STATISTICS</button>
+            <button onclick="switchTab('archive')" id="tabArchive" class="analytics-tab"
+                style="flex: 1; padding: 10px; background: rgba(255,255,255,0.1); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.85rem;">📁
+                ARCHIVE</button>
+            <button onclick="switchTab('handover')" id="tabHandover" class="analytics-tab"
+                style="flex: 1; padding: 10px; background: rgba(255,255,255,0.1); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.85rem;">📋
+                HANDOVER</button>
+        </div>
+
+        <!-- STATISTICS TAB -->
+        <div id="statsContent" class="tab-content">
+            <div
+                style="background: rgba(212,175,55,0.1); border: 1px solid var(--color-primary); border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+                <h3 style="color: var(--color-primary); margin: 0 0 15px 0; font-size: 1.1rem;">📈 Today's Performance
+                </h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px;">
+                        <div style="color: #888; font-size: 0.8rem; margin-bottom: 5px;">Total Incidents</div>
+                        <div id="statTotalToday"
+                            style="font-size: 2rem; font-weight: 700; color: var(--color-primary);">0</div>
+                    </div>
+                    <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px;">
+                        <div style="color: #888; font-size: 0.8rem; margin-bottom: 5px;">Avg Response Time</div>
+                        <div id="statAvgResponse"
+                            style="font-size: 2rem; font-weight: 700; color: var(--color-success);">0m</div>
+                    </div>
+                    <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px;">
+                        <div style="color: #888; font-size: 0.8rem; margin-bottom: 5px;">Active Now</div>
+                        <div id="statActiveNow" style="font-size: 2rem; font-weight: 700; color: var(--color-warning);">
+                            0</div>
+                    </div>
+                    <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px;">
+                        <div style="color: #888; font-size: 0.8rem; margin-bottom: 5px;">Resolved</div>
+                        <div id="statResolved" style="font-size: 2rem; font-weight: 700; color: var(--color-success);">0
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="background: rgba(0,0,0,0.3); border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+                <h3 style="color: white; margin: 0 0 15px 0; font-size: 1.1rem;">📊 Incidents by Type</h3>
+                <div id="statsByType" style="display: flex; flex-direction: column; gap: 10px;">
+                    <!-- Will be populated by JavaScript -->
+                </div>
+            </div>
+
+            <button onclick="exportStatistics()"
+                style="width: 100%; padding: 15px; background: var(--color-success); color: #000; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 1rem;">📥
+                EXPORT STATISTICS (PDF)</button>
+        </div>
+
+        <!-- ARCHIVE TAB -->
+        <div id="archiveContent" class="tab-content" style="display: none;">
+            <div style="background: rgba(0,0,0,0.3); border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+                <h3 style="color: white; margin: 0 0 15px 0; font-size: 1.1rem;">🔍 Search Archive</h3>
+                <input type="date" id="archiveDate"
+                    style="width: 100%; padding: 10px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 6px; margin-bottom: 10px;">
+                <button onclick="loadArchive()"
+                    style="width: 100%; padding: 12px; background: var(--color-primary); color: #000; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">🔍
+                    LOAD INCIDENTS</button>
+            </div>
+
+            <div id="archiveList" style="max-height: 500px; overflow-y: auto;">
+                <!-- Archive items will be loaded here -->
+            </div>
+
+            <button onclick="exportArchive()"
+                style="width: 100%; padding: 15px; background: var(--color-success); color: #000; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 1rem; margin-top: 20px;">📥
+                EXPORT ARCHIVE (PDF)</button>
+        </div>
+
+        <!-- HANDOVER TAB -->
+        <div id="handoverContent" class="tab-content" style="display: none;">
+            <div style="background: rgba(0,0,0,0.3); border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+                <h3 style="color: white; margin: 0 0 15px 0; font-size: 1.1rem;">👤 Shift Information</h3>
+                <div style="margin-bottom: 15px;">
+                    <label style="color: #888; font-size: 0.85rem; display: block; margin-bottom: 5px;">Operator
+                        Name</label>
+                    <div id="handoverOperator" style="color: white; font-weight: 600; font-size: 1.1rem;">Loading...
+                    </div>
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <label style="color: #888; font-size: 0.85rem; display: block; margin-bottom: 5px;">Shift Start
+                        Time</label>
+                    <div id="handoverStartTime" style="color: white; font-weight: 600;">--:--</div>
+                </div>
+            </div>
+
+            <div style="background: rgba(0,0,0,0.3); border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+                <h3 style="color: white; margin: 0 0 15px 0; font-size: 1.1rem;">📝 Handover Notes</h3>
+                <textarea id="handoverNotes" placeholder="Enter notes for next shift..."
+                    style="width: 100%; height: 150px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 6px; padding: 10px; font-family: inherit; resize: vertical;"></textarea>
+                <button onclick="saveHandoverNotes()"
+                    style="width: 100%; padding: 12px; background: var(--color-primary); color: #000; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-top: 10px;">💾
+                    SAVE NOTES</button>
+            </div>
+
+            <div style="background: rgba(0,0,0,0.3); border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+                <h3 style="color: white; margin: 0 0 15px 0; font-size: 1.1rem;">📊 Current Shift Summary</h3>
+                <div id="handoverSummary" style="color: #888; line-height: 1.6;">
+                    <!-- Will be populated -->
+                </div>
+            </div>
+
+            <button onclick="exportHandover()"
+                style="width: 100%; padding: 15px; background: var(--color-success); color: #000; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 1rem;">📥
+                EXPORT HANDOVER REPORT (PDF)</button>
+        </div>
+
     </div>
 
     <!-- Leaflet JS -->
@@ -394,7 +529,7 @@
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-        import { getFirestore, collection, query, where, orderBy, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+        import { getFirestore, collection, query, where, orderBy, onSnapshot, doc, getDoc, getDocs, setDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
         // Firebase Config
         const firebaseConfig = {
@@ -408,33 +543,29 @@
 
         // Initialize Map
         const map = L.map('map', {
-            zoomControl: false // Move zoom control to right
-        }).setView([-26.2041, 28.0473], 11);
+            zoomControl: false,
+            maxZoom: 18
+        }).setView([-26.2041, 28.0473], 16);
 
-        L.control.zoom({
-            position: 'topright'
-        }).addTo(map);
+        L.control.zoom({ position: 'topright' }).addTo(map);
 
         // Map Layers
+        const lightLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap &copy; CARTO',
+            subdomains: 'abcd',
+            maxZoom: 18
+        });
+
         const darkLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
             attribution: '&copy; OpenStreetMap &copy; CARTO',
             subdomains: 'abcd',
-            maxZoom: 20
+            maxZoom: 18
         });
 
         const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-            attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+            attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+            maxZoom: 18
         });
-
-        const hybridLayer = L.layerGroup([
-            satelliteLayer,
-            L.tileLayer('https://stamen-tiles-{s}.a.ssl.fastly.net/toner-lines/{z}/{x}/{y}{r}.png', {
-                attribution: 'Map tiles by Stamen Design, <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> &mdash; Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-                subdomains: 'abcd',
-                minZoom: 0,
-                maxZoom: 20
-            })
-        ]);
 
         // Add default layer
         darkLayer.addTo(map);
@@ -442,47 +573,106 @@
         // Layer Control
         const baseMaps = {
             "Dark Mode": darkLayer,
-            "Satellite": satelliteLayer,
-            // "Hybrid": hybridLayer // Hybrid often requires complex API keys, sticking to Sat + Dark for stability
+            "Light Mode": lightLayer,
+            "Satellite": satelliteLayer
         };
 
         L.control.layers(baseMaps, null, { position: 'topright' }).addTo(map);
 
         const markers = {};
 
+        // AUDIO ALERT SYSTEM
+        let audioContext = null;
+        let isAlertPlaying = false;
+        let alertInterval = null;
+
+        function initAudioSystem() {
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                console.log('✅ Audio system initialized');
+            } catch (error) {
+                console.warn('Audio not available:', error);
+            }
+        }
+
+        function playAlertSound() {
+            if (!audioContext || isAlertPlaying) return;
+
+            isAlertPlaying = true;
+            const now = audioContext.currentTime;
+
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            oscillator.type = 'square';
+            oscillator.frequency.setValueAtTime(900, now);
+
+            gainNode.gain.setValueAtTime(0.8, now);
+            gainNode.gain.setValueAtTime(0, now + 0.1);
+            gainNode.gain.setValueAtTime(0.8, now + 0.2);
+            gainNode.gain.setValueAtTime(0, now + 0.3);
+            gainNode.gain.setValueAtTime(0.8, now + 0.4);
+            gainNode.gain.setValueAtTime(0, now + 0.5);
+            gainNode.gain.setValueAtTime(0.8, now + 0.6);
+            gainNode.gain.setValueAtTime(0.01, now + 0.7);
+
+            oscillator.start(now);
+            oscillator.stop(now + 0.7);
+
+            oscillator.onended = () => {
+                isAlertPlaying = false;
+            };
+        }
+
+        function startContinuousAlert() {
+            if (alertInterval) return;
+            playAlertSound();
+            alertInterval = setInterval(() => {
+                playAlertSound();
+            }, 2000);
+        }
+
+        function stopContinuousAlert() {
+            if (alertInterval) {
+                clearInterval(alertInterval);
+                alertInterval = null;
+                isAlertPlaying = false;
+            }
+        }
+
         // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // Start listening for incidents only after authentication
-        function startIncidentListener() {
+        document.addEventListener('click', () => {
+            if (!audioContext) initAudioSystem();
+        }, { once: true });
 
-            // Listen for all incidents (we'll filter in code)
+        function startIncidentListener() {
             const q = query(
                 collection(db, 'incidents'),
                 orderBy('createdAt', 'desc')
             );
 
             onSnapshot(q, (snapshot) => {
-                console.log('📡 Received snapshot with', snapshot.size, 'incidents');
-
                 snapshot.docChanges().forEach((change) => {
                     const incident = { id: change.doc.id, ...change.doc.data() };
-
-                    console.log('Incident change:', change.type, incident);
-
-                    // Only show active incidents (pending, dispatched)
                     const isActive = incident.status === 'pending' || incident.status === 'dispatched';
 
                     if (change.type === 'added' && isActive) {
                         addIncident(incident);
+                        if (incident.type !== 'technical') {
+                            startContinuousAlert();
+                        }
                     }
                     if (change.type === 'modified') {
                         if (isActive) {
                             updateIncident(incident);
                         } else {
-                            // Incident was resolved/cancelled, remove it
                             removeIncident(incident.id);
                         }
                     }
@@ -491,54 +681,107 @@
                     }
                 });
 
-                // Update connection status
                 document.getElementById('connectionStatus').textContent = 'System Online • Monitoring Active';
                 document.getElementById('connectionStatus').style.color = '';
             }, (error) => {
-                console.error('❌ Listener error:', error);
-                console.error('Error code:', error.code);
-                console.error('Error message:', error.message);
-
+                console.error('Listener error:', error);
                 document.getElementById('connectionStatus').textContent = 'Connection Lost: ' + error.code;
                 document.getElementById('connectionStatus').style.color = '#ff3b30';
             });
         }
 
-        // UI Functions
+        function getIconForType(type) {
+            switch (type) {
+                case 'panic': return '🛡️';
+                case 'medical': return '🚑';
+                case 'fire': return '🔥';
+                case 'technical': return '🔧';
+                default: return '⚠️';
+            }
+        }
+
         function addIncident(incident) {
             const list = document.getElementById('incidentList');
             const card = document.createElement('div');
             card.className = 'incident-card new active';
             card.id = `card-${incident.id}`;
 
+            let typeColor = 'var(--color-danger)';
+            let typeLabel = 'EMERGENCY';
+
+            switch (incident.type) {
+                case 'panic':
+                    typeColor = '#ff3b30';
+                    typeLabel = 'ARMED RESPONSE';
+                    break;
+                case 'medical':
+                    typeColor = '#007aff';
+                    typeLabel = 'MEDICAL ASSISTANCE';
+                    break;
+                case 'fire':
+                    typeColor = '#ffcc00';
+                    typeLabel = 'FIRE & RESCUE';
+                    break;
+                case 'technical':
+                    typeColor = '#8e8e93';
+                    typeLabel = 'TECHNICAL SUPPORT';
+                    break;
+            }
+
             const typeIcon = getIconForType(incident.type);
             const timeStr = incident.createdAt?.toDate ? incident.createdAt.toDate().toLocaleTimeString() : new Date().toLocaleTimeString();
+            const fullAddress = incident.location?.address || 'GPS Coordinates Only';
+            const coords = incident.location?.coordinates ?
+                `${incident.location.coordinates.lat.toFixed(6)}, ${incident.location.coordinates.lng.toFixed(6)}` : 'N/A';
+
+            card.style.borderColor = typeColor;
+            card.style.boxShadow = `0 0 15px ${typeColor}20`;
 
             card.innerHTML = `
                 <div class="card-header">
                     <div class="incident-type">
-                        <span>${typeIcon}</span>
-                        <span>${incident.type?.toUpperCase() || 'EMERGENCY'}</span>
+                        <span style="font-size: 1.4rem;">${typeIcon}</span>
+                        <span style="color: ${typeColor};">${typeLabel}</span>
                     </div>
                     <span class="incident-time">${timeStr}</span>
                 </div>
                 <div class="card-body">
                     <div class="info-row">
-                        <span class="info-label">User</span>
+                        <span class="info-label">Client</span>
                         <span class="info-value">${incident.userProfile?.firstName || 'Unknown'} ${incident.userProfile?.lastName || ''}</span>
                     </div>
                     <div class="info-row">
                         <span class="info-label">Phone</span>
-                        <span class="info-value">${incident.userProfile?.phone || 'N/A'}</span>
+                        <span class="info-value"><a href="tel:${incident.userProfile?.phone || ''}" style="color: var(--color-primary); text-decoration: none;">${incident.userProfile?.phone || 'N/A'}</a></span>
                     </div>
                     <div class="info-row">
-                        <span class="info-label">Location</span>
-                        <span class="info-value" style="font-size: 0.8rem; max-width: 60%;">${incident.location?.address || 'GPS Coordinates Only'}</span>
+                        <span class="info-label">Address</span>
+                        <span class="info-value" style="font-size: 0.85rem; max-width: 65%; line-height: 1.3;">${fullAddress}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">GPS</span>
+                        <span class="info-value" style="font-size: 0.75rem; font-family: monospace;">${coords}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Status</span>
+                        <span class="info-value" id="status-${incident.id}" style="color: var(--color-warning); font-weight: 700;">⏳ PENDING</span>
                     </div>
                 </div>
-                <div class="card-actions">
-                    <button class="btn btn-primary" onclick="focusIncident('${incident.id}')">Locate Unit</button>
-                    <button class="btn" style="background: rgba(255,255,255,0.1); color: white;">Details</button>
+                <div class="card-actions" style="flex-direction: column; gap: 8px;">
+                    <button class="btn btn-danger" onclick="acknowledgeIncident('${incident.id}')" style="width: 100%; background: var(--color-warning); color: #000; font-weight: 700;">
+                        ✓ ACKNOWLEDGE
+                    </button>
+                    <div style="display: flex; gap: 8px; width: 100%;">
+                        <button class="btn" onclick="dispatchUnit('${incident.id}')" style="flex: 1; background: var(--color-success); color: #000; font-weight: 600;">
+                            🚔 DISPATCH
+                        </button>
+                        <button class="btn" onclick="sendUpdate('${incident.id}')" style="flex: 1; background: rgba(212, 175, 55, 0.2); color: var(--color-primary); border: 1px solid var(--color-primary);">
+                            💬 UPDATE
+                        </button>
+                    </div>
+                    <button class="btn" onclick="resolveIncident('${incident.id}')" style="width: 100%; background: rgba(255,255,255,0.05); color: #888; font-size: 0.75rem;">
+                        ✓ RESOLVE
+                    </button>
                 </div>
             `;
 
@@ -550,7 +793,7 @@
 
                 const pulseIcon = L.divIcon({
                     className: 'custom-marker',
-                    html: '<div class="pulse-ring"></div>',
+                    html: `<div class="pulse-ring" style="background: ${typeColor}; box-shadow: 0 0 0 ${typeColor}; border-color: white;"></div>`,
                     iconSize: [24, 24],
                     iconAnchor: [12, 12]
                 });
@@ -558,14 +801,14 @@
                 const marker = L.marker([lat, lng], { icon: pulseIcon }).addTo(map);
                 marker.bindPopup(`
                     <div style="font-family: 'Inter'; text-align: center;">
-                        <strong style="color: #d00; font-size: 1.1em;">${incident.type?.toUpperCase()}</strong><br>
+                        <strong style="color: ${typeColor}; font-size: 1.1em;">${typeLabel}</strong><br>
                         ${incident.userProfile?.firstName}<br>
                         <small>${timeStr}</small>
                     </div>
                 `);
 
                 markers[incident.id] = { marker, lat, lng };
-                map.flyTo([lat, lng], 16, { duration: 2 });
+                map.flyTo([lat, lng], 17, { duration: 2 });
             }
         }
 
@@ -587,19 +830,10 @@
             }
         }
 
-        function getIconForType(type) {
-            switch (type) {
-                case 'panic': return '🚨';
-                case 'medical': return '🚑';
-                case 'fire': return '🔥';
-                default: return '⚠️';
-            }
-        }
-
         window.focusIncident = (id) => {
             if (markers[id]) {
                 const { lat, lng } = markers[id];
-                map.flyTo([lat, lng], 17, { duration: 1.5 });
+                map.flyTo([lat, lng], 18, { duration: 1.5 });
                 markers[id].marker.openPopup();
 
                 document.querySelectorAll('.incident-card').forEach(c => c.classList.remove('active'));
@@ -607,7 +841,154 @@
             }
         };
 
-        // Login Logic
+        window.acknowledgeIncident = async (id) => {
+            stopContinuousAlert();
+            try {
+                const incidentRef = doc(db, 'incidents', id);
+                const incidentDoc = await getDoc(incidentRef);
+                if (!incidentDoc.exists()) return;
+                const incident = incidentDoc.data();
+
+                await setDoc(incidentRef, {
+                    acknowledged: true,
+                    acknowledgedAt: serverTimestamp(),
+                    acknowledgedBy: auth.currentUser.email,
+                    timeline: [
+                        ...(incident.timeline || []),
+                        {
+                            timestamp: new Date(),
+                            action: 'incident_acknowledged',
+                            actor: 'control_room',
+                            note: `Acknowledged by ${auth.currentUser.email}`
+                        }
+                    ],
+                    updatedAt: serverTimestamp()
+                }, { merge: true });
+
+                const statusElement = document.getElementById(`status-${id}`);
+                if (statusElement) {
+                    statusElement.textContent = '👁️ ACKNOWLEDGED';
+                    statusElement.style.color = 'var(--color-primary)';
+                }
+            } catch (error) {
+                console.error('Error acknowledging incident:', error);
+                alert('Error acknowledging incident: ' + error.message);
+            }
+        };
+
+        window.dispatchUnit = async (id) => {
+            const unitName = prompt('Enter unit/officer name:', 'Unit Alpha-1');
+            if (!unitName) return;
+            const eta = prompt('Enter ETA (minutes):', '5');
+            if (!eta) return;
+
+            try {
+                const incidentRef = doc(db, 'incidents', id);
+                const incidentDoc = await getDoc(incidentRef);
+                if (!incidentDoc.exists()) return;
+                const incident = incidentDoc.data();
+
+                await setDoc(incidentRef, {
+                    status: 'dispatched',
+                    dispatchedAt: serverTimestamp(),
+                    assignedUnit: {
+                        name: unitName,
+                        officer: auth.currentUser.email,
+                        eta: `${eta} min`,
+                        dispatchedAt: new Date()
+                    },
+                    timeline: [
+                        ...(incident.timeline || []),
+                        {
+                            timestamp: new Date(),
+                            action: 'unit_dispatched',
+                            actor: 'control_room',
+                            note: `${unitName} dispatched - ETA ${eta} min`
+                        }
+                    ],
+                    updatedAt: serverTimestamp()
+                }, { merge: true });
+
+                const statusElement = document.getElementById(`status-${id}`);
+                if (statusElement) {
+                    statusElement.textContent = `🚔 DISPATCHED - ETA ${eta}min`;
+                    statusElement.style.color = 'var(--color-success)';
+                }
+            } catch (error) {
+                console.error('Error dispatching unit:', error);
+                alert('Error dispatching unit: ' + error.message);
+            }
+        };
+
+        window.sendUpdate = async (id) => {
+            const message = prompt('Send update to client:', 'Unit en route. Stay calm.');
+            if (!message) return;
+
+            try {
+                const incidentRef = doc(db, 'incidents', id);
+                const incidentDoc = await getDoc(incidentRef);
+                if (!incidentDoc.exists()) return;
+                const incident = incidentDoc.data();
+
+                await setDoc(incidentRef, {
+                    timeline: [
+                        ...(incident.timeline || []),
+                        {
+                            timestamp: new Date(),
+                            action: 'control_room_update',
+                            actor: 'control_room',
+                            note: message
+                        }
+                    ],
+                    updatedAt: serverTimestamp()
+                }, { merge: true });
+                alert('✅ Message sent to client successfully');
+            } catch (error) {
+                console.error('Error sending update:', error);
+                alert('Error sending update: ' + error.message);
+            }
+        };
+
+        window.resolveIncident = async (id) => {
+            if (!confirm('Mark this incident as RESOLVED?\n\nThis will close the incident and notify the client.')) return;
+            const resolution = prompt('Resolution notes:', 'All clear. Unit stood down.');
+
+            try {
+                const incidentRef = doc(db, 'incidents', id);
+                const incidentDoc = await getDoc(incidentRef);
+                if (!incidentDoc.exists()) return;
+                const incident = incidentDoc.data();
+
+                const resolvedIncident = {
+                    ...incident,
+                    status: 'resolved',
+                    resolvedAt: serverTimestamp(),
+                    resolvedBy: auth.currentUser.email,
+                    resolution: resolution || 'Resolved by control room',
+                    timeline: [
+                        ...(incident.timeline || []),
+                        {
+                            timestamp: new Date(),
+                            action: 'incident_resolved',
+                            actor: 'control_room',
+                            note: resolution || 'Incident resolved'
+                        }
+                    ],
+                    updatedAt: serverTimestamp()
+                };
+
+                await setDoc(incidentRef, resolvedIncident, { merge: true });
+                await setDoc(doc(db, 'incidents_archive', id), {
+                    ...resolvedIncident,
+                    archivedAt: serverTimestamp(),
+                    archivedBy: auth.currentUser.email
+                });
+            } catch (error) {
+                console.error('Error resolving incident:', error);
+                alert('Error resolving incident: ' + error.message);
+            }
+        };
+
         window.checkEnter = (e) => {
             if (e.key === 'Enter') window.attemptLogin();
         };
@@ -626,7 +1007,6 @@
             try {
                 errorElement.style.display = 'none';
                 await signInWithEmailAndPassword(auth, email, password);
-                // onAuthStateChanged will handle the rest
             } catch (error) {
                 console.error('Login error:', error);
                 errorElement.textContent = 'Access Denied: ' + error.message;
@@ -634,23 +1014,246 @@
             }
         };
 
-        // Auth state observer
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                console.log('✅ Authenticated as:', user.email);
                 const overlay = document.getElementById('loginOverlay');
                 overlay.style.opacity = '0';
                 setTimeout(() => overlay.style.display = 'none', 500);
-
-                // Start listening to incidents
                 startIncidentListener();
+                initializeAnalytics();
             } else {
-                console.log('❌ Not authenticated');
                 document.getElementById('loginOverlay').style.display = 'flex';
                 document.getElementById('connectionStatus').textContent = 'Not Authenticated';
                 document.getElementById('connectionStatus').style.color = '#ff3b30';
             }
         });
+
+        let shiftStartTime = null;
+
+        function initializeAnalytics() {
+            shiftStartTime = new Date();
+            document.getElementById('handoverOperator').textContent = auth.currentUser.email;
+            document.getElementById('handoverStartTime').textContent = shiftStartTime.toLocaleTimeString();
+            loadStatistics();
+            setInterval(loadStatistics, 30000);
+        }
+
+        window.toggleAnalytics = () => {
+            const panel = document.getElementById('analyticsPanel');
+            if (panel.style.right === '0px') {
+                panel.style.right = '-500px';
+            } else {
+                panel.style.right = '0px';
+                loadStatistics();
+            }
+        };
+
+        window.switchTab = (tabName) => {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
+            document.querySelectorAll('.analytics-tab').forEach(btn => {
+                btn.style.background = 'rgba(255,255,255,0.1)';
+                btn.style.color = 'white';
+            });
+
+            document.getElementById(tabName + 'Content').style.display = 'block';
+            document.getElementById('tab' + tabName.charAt(0).toUpperCase() + tabName.slice(1)).style.background = 'var(--color-primary)';
+            document.getElementById('tab' + tabName.charAt(0).toUpperCase() + tabName.slice(1)).style.color = '#000';
+
+            if (tabName === 'archive') {
+                document.getElementById('archiveDate').valueAsDate = new Date();
+            } else if (tabName === 'handover') {
+                loadHandoverData();
+            }
+        };
+
+        async function loadStatistics() {
+            try {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                const q = query(
+                    collection(db, 'incidents'),
+                    where('createdAt', '>=', today),
+                    orderBy('createdAt', 'desc')
+                );
+
+                const snapshot = await getDocs(q);
+                const incidents = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+                const totalToday = incidents.length;
+                const activeNow = incidents.filter(i => i.status === 'pending' || i.status === 'dispatched').length;
+                const resolved = incidents.filter(i => i.status === 'resolved').length;
+
+                let totalResponseTime = 0;
+                let responseCounted = 0;
+                incidents.forEach(incident => {
+                    if (incident.resolvedAt && incident.createdAt) {
+                        const created = incident.createdAt.toDate ? incident.createdAt.toDate() : new Date(incident.createdAt);
+                        const resolved = incident.resolvedAt.toDate ? incident.resolvedAt.toDate() : new Date(incident.resolvedAt);
+                        const responseTime = (resolved - created) / 1000 / 60;
+                        totalResponseTime += responseTime;
+                        responseCounted++;
+                    }
+                });
+                const avgResponse = responseCounted > 0 ? Math.round(totalResponseTime / responseCounted) : 0;
+
+                document.getElementById('statTotalToday').textContent = totalToday;
+                document.getElementById('statActiveNow').textContent = activeNow;
+                document.getElementById('statResolved').textContent = resolved;
+                document.getElementById('statAvgResponse').textContent = avgResponse + 'm';
+
+                const typeStats = {};
+                incidents.forEach(i => {
+                    typeStats[i.type] = (typeStats[i.type] || 0) + 1;
+                });
+
+                const typeContainer = document.getElementById('statsByType');
+                typeContainer.innerHTML = '';
+                Object.entries(typeStats).forEach(([type, count]) => {
+                    const icons = { panic: '🚨', medical: '🚑', fire: '🔥', technical: '🔧' };
+                    const bar = document.createElement('div');
+                    bar.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 6px;';
+                    bar.innerHTML = `
+                        <span style="font-weight: 600;">${icons[type] || '⚠️'} ${type.toUpperCase()}</span>
+                        <span style="color: var(--color-primary); font-weight: 700; font-size: 1.2rem;">${count}</span>
+                    `;
+                    typeContainer.appendChild(bar);
+                });
+
+            } catch (error) {
+                console.error('Error loading statistics:', error);
+            }
+        }
+
+        window.loadArchive = async () => {
+            const dateInput = document.getElementById('archiveDate');
+            const selectedDate = new Date(dateInput.value);
+            selectedDate.setHours(0, 0, 0, 0);
+            const nextDay = new Date(selectedDate);
+            nextDay.setDate(nextDay.getDate() + 1);
+
+            try {
+                const q = query(
+                    collection(db, 'incidents_archive'),
+                    where('createdAt', '>=', selectedDate),
+                    where('createdAt', '<', nextDay),
+                    orderBy('createdAt', 'desc')
+                );
+
+                const snapshot = await getDocs(q);
+                const archiveList = document.getElementById('archiveList');
+                archiveList.innerHTML = '';
+
+                if (snapshot.empty) {
+                    archiveList.innerHTML = '<div style="color: #888; text-align: center; padding: 40px;">No archived incidents for this date</div>';
+                    return;
+                }
+
+                snapshot.forEach(doc => {
+                    const incident = doc.data();
+                    const card = document.createElement('div');
+                    card.style.cssText = 'background: rgba(255,255,255,0.05); border-radius: 8px; padding: 15px; margin-bottom: 10px; border-left: 3px solid var(--color-primary);';
+
+                    const time = incident.createdAt?.toDate ? incident.createdAt.toDate().toLocaleTimeString() : 'N/A';
+                    const type = incident.type || 'unknown';
+                    const user = incident.userEmail || 'Unknown';
+                    const resolution = incident.resolution || 'N/A';
+                    const address = incident.address || incident.location || 'No address recorded';
+
+                    card.innerHTML = `
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                            <strong style="color: var(--color-primary);">${type.toUpperCase()}</strong>
+                            <span style="color: #888; font-size: 0.85rem;">${time}</span>
+                        </div>
+                        <div style="color: #aaa; font-size: 0.9rem; margin-bottom: 5px;">User: ${user}</div>
+                        <div style="color: #00ff88; font-size: 0.9rem; margin-bottom: 5px;">📍 ${address}</div>
+                        <div style="color: #888; font-size: 0.85rem;">Resolution: ${resolution}</div>
+                    `;
+                    archiveList.appendChild(card);
+                });
+
+            } catch (error) {
+                console.error('Error loading archive:', error);
+                alert('Error loading archive: ' + error.message);
+            }
+        };
+
+        function loadHandoverData() {
+            const summary = document.getElementById('handoverSummary');
+            const shiftDuration = shiftStartTime ? Math.round((new Date() - shiftStartTime) / 1000 / 60) : 0;
+
+            summary.innerHTML = `
+                <div style="margin-bottom: 10px;">⏱️ <strong>Shift Duration:</strong> ${shiftDuration} minutes</div>
+                <div style="margin-bottom: 10px;">📊 <strong>Incidents Handled:</strong> <span id="handoverIncidentCount">Loading...</span></div>
+                <div style="margin-bottom: 10px;">⚡ <strong>Currently Active:</strong> <span id="handoverActiveCount">Loading...</span></div>
+            `;
+
+            loadShiftStats();
+        }
+
+        async function loadShiftStats() {
+            if (!shiftStartTime) return;
+
+            try {
+                const q = query(
+                    collection(db, 'incidents'),
+                    where('createdAt', '>=', shiftStartTime),
+                    orderBy('createdAt', 'desc')
+                );
+
+                const snapshot = await getDocs(q);
+                const incidents = snapshot.docs.map(doc => doc.data());
+
+                const activeCount = incidents.filter(i => i.status === 'pending' || i.status === 'dispatched').length;
+
+                document.getElementById('handoverIncidentCount').textContent = incidents.length;
+                document.getElementById('handoverActiveCount').textContent = activeCount;
+
+            } catch (error) {
+                console.error('Error loading shift stats:', error);
+            }
+        }
+
+        window.saveHandoverNotes = async () => {
+            const notes = document.getElementById('handoverNotes').value;
+            if (!notes.trim()) {
+                alert('Please enter handover notes');
+                return;
+            }
+
+            try {
+                await setDoc(doc(db, 'shift_handovers', new Date().toISOString()), {
+                    operator: auth.currentUser.email,
+                    shiftStart: shiftStartTime,
+                    shiftEnd: new Date(),
+                    notes: notes,
+                    createdAt: serverTimestamp()
+                });
+
+                alert('✅ Handover notes saved successfully');
+                document.getElementById('handoverNotes').value = '';
+
+            } catch (error) {
+                console.error('Error saving handover notes:', error);
+                alert('Error saving notes: ' + error.message);
+            }
+        };
+
+        // EXPORT FUNCTIONS
+        window.exportStatistics = () => {
+            alert('📥 EXPORT STATISTICS\n\nExporting to PDF...\n\nThis feature requires a PDF library integration.\nFor now, you can use browser print (Ctrl+P) to save as PDF.');
+            window.print();
+        };
+
+        window.exportArchive = () => {
+            alert('📥 EXPORT ARCHIVE\n\nExporting archive to PDF...\n\nThis feature requires a PDF library integration.\nFor now, you can use browser print (Ctrl+P) to save as PDF.');
+            window.print();
+        };
+
+        window.exportHandover = () => {
+            alert('📥 EXPORT HANDOVER REPORT\n\nExporting handover report to PDF...\n\nThis feature requires a PDF library integration.\nFor now, you can use browser print (Ctrl+P) to save as PDF.');
+            window.print();
+        };
 
     </script>
 </body>

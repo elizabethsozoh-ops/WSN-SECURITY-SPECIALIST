@@ -615,12 +615,15 @@ function getCurrentLocation() {
   });
 }
 
-// Reverse Geocoding - Convert GPS coordinates to address
+// Reverse Geocoding - Convert GPS coordinates to DETAILED address with house number
 async function reverseGeocodeLocation(lat, lng) {
   try {
-    // Use OpenStreetMap Nominatim API for reverse geocoding (free, no API key needed)
+    console.log('🔍 REVERSE GEOCODING:', lat, lng);
+
+    // Use OpenStreetMap Nominatim API with addressdetails for structured address
+    // Using zoom=19 for maximum precision to get house numbers
     const response = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=19&addressdetails=1`,
       {
         headers: {
           'User-Agent': 'WSN-Guardian-Emergency-Response-App'
@@ -633,15 +636,62 @@ async function reverseGeocodeLocation(lat, lng) {
     }
 
     const data = await response.json();
+    console.log('📍 Geocoding Response:', data);
 
-    if (data && data.display_name) {
-      return data.display_name;
-    } else {
-      // Fallback to coordinates if address not found
-      return `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+    if (data && data.address) {
+      // Construct detailed address from components
+      const addr = data.address;
+      console.log('🏠 Address Components:', addr);
+
+      const parts = [];
+
+      // House number + street (most important for emergency response)
+      if (addr.house_number) {
+        console.log('✅ House number found:', addr.house_number);
+        parts.push(addr.house_number);
+      } else {
+        console.warn('⚠️ No house number in geocoding data');
+      }
+
+      if (addr.road) parts.push(addr.road);
+      else if (addr.street) parts.push(addr.street);
+
+      // Suburb/neighborhood
+      if (addr.suburb) parts.push(addr.suburb);
+      else if (addr.neighbourhood) parts.push(addr.neighbourhood);
+      else if (addr.residential) parts.push(addr.residential);
+
+      // City
+      if (addr.city) parts.push(addr.city);
+      else if (addr.town) parts.push(addr.town);
+      else if (addr.village) parts.push(addr.village);
+
+      // Province/State
+      if (addr.state) parts.push(addr.state);
+
+      // Postal code
+      if (addr.postcode) parts.push(addr.postcode);
+
+      // If we got structured address, use it
+      if (parts.length > 0) {
+        const finalAddress = parts.join(', ');
+        console.log('✅ Final Address:', finalAddress);
+        return finalAddress;
+      }
+
+      // Otherwise use full display_name
+      if (data.display_name) {
+        console.log('⚠️ Using display_name:', data.display_name);
+        return data.display_name;
+      }
     }
+
+    // Fallback to coordinates if no address found
+    console.warn('⚠️ No address found, using coordinates');
+    return `GPS: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+
   } catch (error) {
-    console.error('Reverse geocoding error:', error);
+    console.error('❌ Reverse geocoding error:', error);
     // Fallback to coordinates
     return `GPS: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
   }

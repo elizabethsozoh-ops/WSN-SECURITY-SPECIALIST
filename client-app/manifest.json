@@ -1,7 +1,7 @@
 {
-    "name": "SSS Guardian - Powered by WSN Security",
-    "short_name": "SSS Guardian",
-    "description": "Emergency response platform for SSS Security clients",
+    "name": "ABC SECURITY - Powered by WSN GROUP",
+    "short_name": "ABC SECURITY",
+    "description": "Professional security response platform with silent panic, live location sharing, and family alerts",
     "start_url": "/index.html",
     "display": "standalone",
     "background_color": "#0a0a0a",

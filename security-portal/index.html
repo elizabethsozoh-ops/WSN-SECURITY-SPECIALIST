@@ -665,7 +665,7 @@
 
                     if (change.type === 'added' && isActive) {
                         addIncident(incident);
-                        if (incident.type !== 'technical') {
+                        if (incident.type !== 'technical' && incident.type !== 'incident-report') {
                             startContinuousAlert();
                         }
                     }
@@ -691,11 +691,14 @@
         }
 
         function getIconForType(type) {
+            const baseStyle = 'width: 64px; height: 64px; object-fit: contain; background: rgba(0,0,0,0.8); padding: 8px; border-radius: 8px;';
             switch (type) {
-                case 'panic': return '🛡️';
-                case 'medical': return '🚑';
-                case 'fire': return '🔥';
-                case 'technical': return '🔧';
+                case 'ghost-panic': return `<div style="${baseStyle} font-size: 48px; display: flex; align-items: center; justify-content: center;">👻</div>`;
+                case 'panic': return `<img src="images/armed-response.png" style="${baseStyle}">`;
+                case 'medical': return `<img src="images/medical.png" style="${baseStyle}">`;
+                case 'fire': return `<img src="images/fire.png" style="${baseStyle}">`;
+                case 'incident-report': return `<img src="images/incident-report.svg" style="${baseStyle}">`;
+                case 'technical': return `<img src="images/technical.png" style="${baseStyle}">`;
                 default: return '⚠️';
             }
         }
@@ -710,21 +713,29 @@
             let typeLabel = 'EMERGENCY';
 
             switch (incident.type) {
+                case 'ghost-panic':
+                    typeColor = '#8B00FF';
+                    typeLabel = '👻 GHOST PANIC - APP CLOSED ON CLIENT DEVICE';
+                    break;
                 case 'panic':
-                    typeColor = '#ff3b30';
-                    typeLabel = 'ARMED RESPONSE';
+                    typeColor = '#FF3B30';
+                    typeLabel = 'PANIC!!!!';
                     break;
                 case 'medical':
-                    typeColor = '#007aff';
+                    typeColor = '#007AFF';
                     typeLabel = 'MEDICAL ASSISTANCE';
                     break;
                 case 'fire':
-                    typeColor = '#ffcc00';
+                    typeColor = '#FF9500';
                     typeLabel = 'FIRE & RESCUE';
                     break;
+                case 'incident-report':
+                    typeColor = '#9B59B6';
+                    typeLabel = 'INCIDENT REPORT';
+                    break;
                 case 'technical':
-                    typeColor = '#8e8e93';
-                    typeLabel = 'TECHNICAL SUPPORT';
+                    typeColor = '#D4AF37';
+                    typeLabel = 'TECHNICAL DEPARTMENT';
                     break;
             }
 
@@ -735,12 +746,13 @@
                 `${incident.location.coordinates.lat.toFixed(6)}, ${incident.location.coordinates.lng.toFixed(6)}` : 'N/A';
 
             card.style.borderColor = typeColor;
-            card.style.boxShadow = `0 0 15px ${typeColor}20`;
+            card.style.boxShadow = `0 0 30px ${typeColor}40, 0 4px 15px rgba(0,0,0,0.5)`;
+            card.style.borderLeft = `4px solid ${typeColor}`;
 
             card.innerHTML = `
                 <div class="card-header">
                     <div class="incident-type">
-                        <span style="font-size: 1.4rem;">${typeIcon}</span>
+                        <span>${typeIcon}</span>
                         <span style="color: ${typeColor};">${typeLabel}</span>
                     </div>
                     <span class="incident-time">${timeStr}</span>

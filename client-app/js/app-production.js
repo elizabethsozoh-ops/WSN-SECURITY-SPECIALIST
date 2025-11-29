@@ -1,4 +1,4 @@
-// WSN Guardian - Production Version with Firebase
+// ABC Security - Production Version with Firebase
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 import { getFirestore, collection, addDoc, setDoc, doc, getDoc, getDocs, query, where, orderBy, onSnapshot, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
@@ -26,7 +26,7 @@ let currentIncident = null;
 const companyConfig = {
   companyId: "wsn-group",
   displayName: "abc security",
-  tagline: "Powered by WSN Security Specialist",
+  tagline: "Powered by WSN GROUP",
   colors: {
     primary: "#D4AF37",
     secondary: "#C0C0C0"
@@ -38,7 +38,7 @@ const companyConfig = {
 
 // Initialize App
 function initApp() {
-  console.log('🚀 WSN Guardian - Production Mode');
+  console.log('🚀 ABC Security - Production Mode');
 
   // Apply branding
   applyBranding();
@@ -48,6 +48,7 @@ function initApp() {
 
   // Setup auth state listener
   onAuthStateChanged(auth, (user) => {
+    console.log('🔐 Auth state changed:', user ? 'User logged in' : 'No user');
     if (user) {
       currentUser = user;
       loadUserProfile(user.uid);
@@ -57,6 +58,15 @@ function initApp() {
       hideLoading();
     }
   });
+
+  // Fallback: Hide loading after 3 seconds if still showing
+  setTimeout(() => {
+    if (!document.getElementById('loadingScreen')?.classList.contains('hidden')) {
+      console.warn('⚠️ Loading timeout - forcing hide');
+      hideLoading();
+      showScreen('login');
+    }
+  }, 3000);
 
   // Setup event listeners
   setupEventListeners();
@@ -83,7 +93,7 @@ function applyBranding() {
 
 // Screen Management
 function showScreen(screenName) {
-  const screens = ['loginScreen', 'registerScreen', 'dashboardScreen', 'incidentScreen'];
+  const screens = ['loginScreen', 'registerScreen', 'dashboardScreen', 'incidentScreen', 'incidentReportScreen', 'incidentReportDetailsScreen'];
   screens.forEach(screen => {
     document.getElementById(screen)?.classList.add('hidden');
   });
@@ -160,6 +170,13 @@ function setupEventListeners() {
     alert('👥 Manage Dependants\n\nThis feature is coming soon!');
   });
 
+  // 👻 GHOST PANIC Button - Revolutionary invisible panic feature
+  document.getElementById('silentAlarmBtn')?.addEventListener('click', () => {
+    // NO confirmation dialog - instant activation
+    // This is critical for real danger situations
+    triggerGhostPanic();
+  });
+
   document.getElementById('callControlBtn')?.addEventListener('click', () => {
     const phone = companyConfig.contact.phone;
     if (confirm(`📞 Call Control Room\n\nDial: ${phone}?`)) {
@@ -177,6 +194,31 @@ function setupEventListeners() {
   document.getElementById('callUnitBtn')?.addEventListener('click', () => {
     alert('📞 Calling responding unit...');
   });
+
+  // Incident Report Button
+  document.getElementById('incidentReportBtn')?.addEventListener('click', () => {
+    showScreen('incidentReport');
+  });
+
+  // Incident Report Category Selection
+  document.querySelectorAll('.category-btn').forEach(btn => {
+    btn.addEventListener('click', handleCategorySelection);
+  });
+
+  // Incident Report Form
+  document.getElementById('incidentReportForm')?.addEventListener('submit', handleIncidentReportSubmit);
+
+  // Back buttons for report screens
+  document.getElementById('backFromReportBtn')?.addEventListener('click', () => {
+    showScreen('dashboard');
+  });
+
+  document.getElementById('backToReportCategoriesBtn')?.addEventListener('click', () => {
+    showScreen('incidentReport');
+  });
+
+  // Voice Input Button
+  document.getElementById('voiceInputBtn')?.addEventListener('click', handleVoiceInput);
 }
 
 // Authentication Handlers
@@ -547,6 +589,95 @@ function updateIncidentScreen(incident) {
   }
 }
 
+// 🔕 GHOST PANIC - Revolutionary Invisible Panic Feature
+// Sends alert to control room but COMPLETELY closes app (returns to home screen)
+// NO visual feedback on phone - appears as if user just closed the app
+// CRITICAL for situations where attacker is watching the phone
+async function triggerGhostPanic() {
+  try {
+    console.log('👻 GHOST PANIC ACTIVATED');
+
+    // Get current location silently (no UI updates)
+    let location;
+    try {
+      location = await getCurrentLocation();
+    } catch (error) {
+      console.error('Ghost Panic: Location error (continuing anyway):', error);
+      location = { latitude: 0, longitude: 0, accuracy: 0 };
+    }
+
+    // Get address from GPS silently
+    let addressFromGPS = 'Location unavailable';
+    if (location.latitude !== 0 && location.longitude !== 0) {
+      try {
+        addressFromGPS = await reverseGeocodeLocation(location.latitude, location.longitude);
+      } catch (error) {
+        console.error('Ghost Panic: Geocoding error (continuing anyway):', error);
+        addressFromGPS = `GPS: ${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`;
+      }
+    }
+
+    // Get user data silently
+    const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+    const userData = userDoc.exists() ? userDoc.data() : {};
+
+    // Create GHOST PANIC incident in Firebase
+    const incident = {
+      type: 'ghost-panic',
+      ghostMode: true, // Special flag for control room to know this is ghost panic
+      status: 'pending',
+      priority: 'critical', // HIGHEST priority
+      userId: currentUser.uid,
+      userEmail: currentUser.email,
+      userProfile: userData.profile || {},
+      companyId: companyConfig.companyId,
+      location: {
+        coordinates: {
+          lat: location.latitude,
+          lng: location.longitude,
+          accuracy: location.accuracy
+        },
+        address: addressFromGPS,
+        timestamp: serverTimestamp()
+      },
+      timeline: [{
+        timestamp: new Date(),
+        action: 'ghost_panic_activated',
+        actor: 'client',
+        note: '👻 GHOST PANIC - Client activated invisible panic (app closed on their device)'
+      }],
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    };
+
+    // Send to Firebase (fire and forget - don't wait for response)
+    addDoc(collection(db, 'incidents'), incident).catch(err => {
+      console.error('Ghost Panic: Firebase error:', err);
+    });
+
+    // IMMEDIATELY close app and return to home screen
+    // Multiple methods to ensure it works across different browsers/devices
+
+    // Method 1: Close current window (works in PWA)
+    if (window.opener) {
+      window.close();
+    }
+
+    // Method 2: Navigate away from app (works on iOS Safari)
+    window.location.href = 'about:blank';
+
+    // Method 3: Go back to previous page (fallback)
+    setTimeout(() => {
+      window.history.back();
+    }, 100);
+
+  } catch (error) {
+    console.error('Ghost Panic: Critical error:', error);
+    // Even if there's an error, still try to close the app
+    window.location.href = 'about:blank';
+  }
+}
+
 // Cancel Incident
 async function cancelIncident() {
   if (!currentIncident) return;
@@ -626,7 +757,7 @@ async function reverseGeocodeLocation(lat, lng) {
       `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=19&addressdetails=1`,
       {
         headers: {
-          'User-Agent': 'WSN-Guardian-Emergency-Response-App'
+          'User-Agent': 'ABC-Security-Emergency-Response-App'
         }
       }
     );
@@ -695,6 +826,185 @@ async function reverseGeocodeLocation(lat, lng) {
     // Fallback to coordinates
     return `GPS: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
   }
+}
+
+// Incident Report Handlers
+let selectedCategory = null;
+
+const categoryLabels = {
+  'suspicious-behaviour': 'Suspicious Behaviour',
+  'noise-complaint': 'Noise Complaint',
+  'vandalism': 'Vandalism / Property Damage',
+  'trespassing': 'Trespassing',
+  'lost-found': 'Lost & Found',
+  'traffic-incident': 'Traffic Incident',
+  'other': 'Other'
+};
+
+function handleCategorySelection(e) {
+  const button = e.currentTarget;
+  selectedCategory = button.dataset.category;
+
+  // Update the category display
+  const categoryDisplay = document.getElementById('reportCategory');
+  if (categoryDisplay) {
+    categoryDisplay.textContent = categoryLabels[selectedCategory];
+  }
+
+  // Clear the form
+  document.getElementById('reportDetails').value = '';
+  document.getElementById('reportLocation').value = '';
+  hideError('reportError');
+
+  // Show the details screen
+  showScreen('incidentReportDetails');
+}
+
+async function handleIncidentReportSubmit(e) {
+  e.preventDefault();
+  hideError('reportError');
+
+  const details = document.getElementById('reportDetails').value;
+  const location = document.getElementById('reportLocation').value;
+
+  if (!selectedCategory) {
+    showError('reportError', 'Please select a category');
+    return;
+  }
+
+  if (!details.trim()) {
+    showError('reportError', 'Please describe what you observed');
+    return;
+  }
+
+  try {
+    showLoading();
+
+    // Get current GPS location
+    const gpsLocation = await getCurrentLocation();
+    const addressFromGPS = await reverseGeocodeLocation(gpsLocation.latitude, gpsLocation.longitude);
+
+    // Get user data
+    let userData = { profile: {} };
+
+    if (!currentUser.uid.startsWith('demo-user-')) {
+      let userDocRef = doc(db, 'users', currentUser.uid);
+      let userDoc = await getDoc(userDocRef);
+
+      if (!userDoc.exists()) {
+        const q = query(collection(db, 'users'), where('userId', '==', currentUser.uid));
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+          userDoc = querySnapshot.docs[0];
+        }
+      }
+
+      if (userDoc.exists()) {
+        userData = userDoc.data();
+      }
+    } else {
+      userData.profile = {
+        firstName: 'Demo',
+        lastName: 'User',
+        phone: '000-000-0000',
+        address: 'Demo Address'
+      };
+    }
+
+    // Create incident report
+    const report = {
+      type: 'incident-report',
+      category: selectedCategory,
+      categoryLabel: categoryLabels[selectedCategory],
+      status: 'pending',
+      priority: 'low',
+      userId: currentUser.uid,
+      userEmail: currentUser.email,
+      userProfile: userData.profile || {},
+      companyId: companyConfig.companyId,
+      details: details,
+      location: {
+        coordinates: {
+          lat: gpsLocation.latitude,
+          lng: gpsLocation.longitude,
+          accuracy: gpsLocation.accuracy
+        },
+        address: location || addressFromGPS,
+        timestamp: serverTimestamp()
+      },
+      timeline: [{
+        timestamp: new Date(),
+        action: 'report_created',
+        actor: 'client',
+        note: `Incident report submitted: ${categoryLabels[selectedCategory]}`
+      }],
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    };
+
+    await addDoc(collection(db, 'incidents'), report);
+
+    hideLoading();
+    alert('✓ Report Submitted\n\nYour incident report has been received by the control room. You will be contacted if additional information is needed.');
+
+    // Reset and go back to dashboard
+    selectedCategory = null;
+    document.getElementById('reportDetails').value = '';
+    document.getElementById('reportLocation').value = '';
+    showScreen('dashboard');
+
+  } catch (error) {
+    hideLoading();
+    console.error('Error submitting report:', error);
+    showError('reportError', 'Error submitting report. Please try again.');
+  }
+}
+
+// Voice Input Handler
+function handleVoiceInput() {
+  const textarea = document.getElementById('reportDetails');
+  const statusEl = document.getElementById('voiceStatus');
+  const btn = document.getElementById('voiceInputBtn');
+
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    alert('Voice input is not supported in your browser. Please use Chrome, Edge, or Safari.');
+    return;
+  }
+
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const recognition = new SpeechRecognition();
+
+  recognition.lang = 'en-US';
+  recognition.continuous = false;
+  recognition.interimResults = false;
+
+  statusEl.textContent = '🎤 Listening... Speak now';
+  statusEl.style.display = 'block';
+  btn.disabled = true;
+  btn.textContent = '🎤 Listening...';
+
+  recognition.onresult = (event) => {
+    const transcript = event.results[0][0].transcript;
+    textarea.value = transcript;
+    statusEl.textContent = '✓ Voice input complete';
+    statusEl.style.color = '#34C759';
+  };
+
+  recognition.onerror = (event) => {
+    console.error('Speech recognition error:', event.error);
+    statusEl.textContent = '✗ Error: ' + event.error;
+    statusEl.style.color = '#FF3B30';
+  };
+
+  recognition.onend = () => {
+    btn.disabled = false;
+    btn.textContent = '🎤 Use Voice Input';
+    setTimeout(() => {
+      statusEl.style.display = 'none';
+    }, 3000);
+  };
+
+  recognition.start();
 }
 
 // Error Messages

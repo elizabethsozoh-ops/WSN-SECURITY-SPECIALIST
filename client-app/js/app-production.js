@@ -394,6 +394,21 @@ async function loadUserProfile(userId) {
       const userData = userDoc.data();
       const profile = userData.profile || {};
 
+      // Auto-assign mock account numbers for test users
+      const mockAccounts = {
+        'skylupa@gmail.com': 'ABC-10001',
+        'elizabeth@example.com': 'ABC-10002'
+      };
+
+      if (!userData.accountNumber && mockAccounts[currentUser.email]) {
+        console.log('🔗 Auto-assigning account number for test user:', currentUser.email);
+        await setDoc(userDocRef, {
+          accountNumber: mockAccounts[currentUser.email],
+          accountLinkedAt: serverTimestamp()
+        }, { merge: true });
+        userData.accountNumber = mockAccounts[currentUser.email];
+      }
+
       // Update welcome message
       const welcomeMessage = document.getElementById('welcomeMessage');
       if (welcomeMessage) {

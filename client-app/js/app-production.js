@@ -93,7 +93,7 @@ function applyBranding() {
 
 // Screen Management
 function showScreen(screenName) {
-  const screens = ['loginScreen', 'registerScreen', 'dashboardScreen', 'incidentScreen', 'incidentReportScreen', 'incidentReportDetailsScreen'];
+  const screens = ['loginScreen', 'registerScreen', 'dashboardScreen', 'incidentScreen', 'incidentReportScreen', 'incidentReportDetailsScreen', 'incidentHistoryScreen', 'emergencyContactsScreen', 'safetyCheckInScreen', 'liveLocationScreen'];
   screens.forEach(screen => {
     document.getElementById(screen)?.classList.add('hidden');
   });
@@ -163,7 +163,12 @@ function setupEventListeners() {
 
   // Quick Actions
   document.getElementById('viewHistoryBtn')?.addEventListener('click', () => {
-    alert('📜 Incident History\n\nThis feature is coming soon!');
+    showScreen('incidentHistoryScreen');
+    loadIncidentHistory();
+  });
+
+  document.getElementById('backFromHistoryBtn')?.addEventListener('click', () => {
+    showScreen('dashboardScreen');
   });
 
   document.getElementById('manageDependantsBtn')?.addEventListener('click', () => {
@@ -219,6 +224,48 @@ function setupEventListeners() {
 
   // Voice Input Button
   document.getElementById('voiceInputBtn')?.addEventListener('click', handleVoiceInput);
+
+  // Emergency Contacts
+  document.getElementById('emergencyContactsBtn')?.addEventListener('click', () => {
+    showScreen('emergencyContacts');
+    loadEmergencyContacts();
+  });
+
+  document.getElementById('backFromContactsBtn')?.addEventListener('click', () => {
+    showScreen('dashboard');
+  });
+
+  document.getElementById('addContactForm')?.addEventListener('submit', handleAddContact);
+
+  // Safety Check-In
+  document.getElementById('safetyCheckInBtn')?.addEventListener('click', () => {
+    showScreen('safetyCheckIn');
+    loadCheckInStatus();
+  });
+
+  document.getElementById('backFromCheckInBtn')?.addEventListener('click', () => {
+    showScreen('dashboard');
+  });
+
+  document.getElementById('toggleCheckInBtn')?.addEventListener('click', toggleCheckIn);
+
+  // Live Location Sharing
+  document.getElementById('shareLiveLocationBtn')?.addEventListener('click', () => {
+    showScreen('liveLocation');
+    loadLocationStatus();
+  });
+
+  document.getElementById('backFromLocationBtn')?.addEventListener('click', () => {
+    showScreen('dashboard');
+  });
+
+  document.getElementById('toggleLocationBtn')?.addEventListener('click', toggleLiveLocation);
+
+  // Alert My Family Button (from dashboard)
+  document.getElementById('notifyFamilyBtn')?.addEventListener('click', alertMyFamily);
+
+  // Link Account Button
+  document.getElementById('linkAccountBtn')?.addEventListener('click', linkAccount);
 }
 
 // Authentication Handlers
@@ -351,6 +398,18 @@ async function loadUserProfile(userId) {
       const welcomeMessage = document.getElementById('welcomeMessage');
       if (welcomeMessage) {
         welcomeMessage.textContent = `Welcome, ${profile.firstName || currentUser.email.split('@')[0]}`;
+      }
+
+      // Update account number display
+      const accountNumberEl = document.getElementById('accountNumber');
+      if (accountNumberEl) {
+        if (userData.accountNumber) {
+          accountNumberEl.textContent = userData.accountNumber;
+          accountNumberEl.style.color = 'var(--color-success)';
+        } else {
+          accountNumberEl.textContent = 'Not Linked';
+          accountNumberEl.style.color = '#888';
+        }
       }
 
       // Update last login
@@ -916,6 +975,9 @@ async function handleIncidentReportSubmit(e) {
       type: 'incident-report',
       category: selectedCategory,
       categoryLabel: categoryLabels[selectedCategory],
+      reportCategory: categoryLabels[selectedCategory], // For control room display
+      reportDescription: details, // For control room display
+      reportLocation: location || '', // Specific location if provided
       status: 'pending',
       priority: 'low',
       userId: currentUser.uid,
@@ -929,7 +991,7 @@ async function handleIncidentReportSubmit(e) {
           lng: gpsLocation.longitude,
           accuracy: gpsLocation.accuracy
         },
-        address: location || addressFromGPS,
+        address: addressFromGPS, // GPS-based address
         timestamp: serverTimestamp()
       },
       timeline: [{
@@ -1007,6 +1069,130 @@ function handleVoiceInput() {
   recognition.start();
 }
 
+// Incident History Functions
+async function loadIncidentHistory() {
+  const container = document.getElementById('historyContainer');
+  const loadingEl = document.getElementById('historyLoading');
+  const noHistoryEl = document.getElementById('noHistoryMessage');
+
+  // Show loading
+  container.innerHTML = '';
+  loadingEl.classList.remove('hidden');
+  noHistoryEl.classList.add('hidden');
+
+  try {
+    // Query user's incidents ordered by creation date (newest first)
+    const q = query(
+      collection(db, 'incidents'),
+      where('userId', '==', currentUser.uid),
+      orderBy('createdAt', 'desc')
+    );
+
+    const querySnapshot = await getDocs(q);
+
+    // Hide loading
+    loadingEl.classList.add('hidden');
+
+    if (querySnapshot.empty) {
+      noHistoryEl.classList.remove('hidden');
+      return;
+    }
+
+    // Render incidents
+    querySnapshot.forEach((doc) => {
+      const incident = { id: doc.id, ...doc.data() };
+      const incidentCard = createHistoryCard(incident);
+      container.appendChild(incidentCard);
+    });
+
+  } catch (error) {
+    console.error('Error loading incident history:', error);
+    loadingEl.classList.add('hidden');
+    container.innerHTML = `
+      <div class="card card-metallic" style="text-align: center; padding: 2rem; color: var(--color-danger);">
+        <h3>Error Loading History</h3>
+        <p>${error.message}</p>
+        <button class="btn btn-secondary" onclick="loadIncidentHistory()" style="margin-top: 1rem;">
+          Try Again
+        </button>
+      </div>
+    `;
+  }
+}
+
+function createHistoryCard(incident) {
+  const card = document.createElement('div');
+  card.className = 'card card-metallic';
+  card.style.marginBottom = '1rem';
+
+  // Type labels and colors
+  const typeConfig = {
+    'panic': { label: '🚨 PANIC!!!!', color: '#FF3B30' },
+    'ghost-panic': { label: '⚠️ GHOST ALARM', color: '#8B0000' },
+    'medical': { label: '🏥 MEDICAL ASSISTANCE', color: '#007AFF' },
+    'fire': { label: '🔥 FIRE & RESCUE', color: '#FF9500' },
+    'technical': { label: '🔧 TECHNICAL DEPARTMENT', color: '#888' },
+    'incident-report': { label: '📋 INCIDENT REPORT', color: '#9B59B6' }
+  };
+
+  const config = typeConfig[incident.type] || { label: incident.type, color: '#666' };
+
+  // Status badges
+  const statusConfig = {
+    'pending': { label: '⏳ Pending', color: '#FF9500' },
+    'dispatched': { label: '🚔 Dispatched', color: '#007AFF' },
+    'resolved': { label: '✓ Resolved', color: '#34C759' },
+    'cancelled': { label: '✕ Cancelled', color: '#888' }
+  };
+
+  const status = statusConfig[incident.status] || { label: incident.status, color: '#666' };
+
+  // Format timestamp
+  const timestamp = incident.createdAt?.toDate ? incident.createdAt.toDate() : new Date();
+  const timeStr = timestamp.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) + ' at ' + timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  // Build report details if it's an incident report
+  const reportDetails = incident.type === 'incident-report' ? `
+    <div style="background: rgba(155,89,182,0.1); border: 1px solid rgba(155,89,182,0.3); border-radius: 8px; padding: 10px; margin-top: 10px;">
+      <div style="font-weight: 600; color: #9B59B6; font-size: 0.85rem;">
+        ${incident.reportCategory || incident.categoryLabel || 'Unknown Category'}
+      </div>
+      <div style="color: var(--color-silver); font-size: 0.8rem; margin-top: 5px;">
+        ${incident.reportDescription || incident.details || 'No description'}
+      </div>
+    </div>
+  ` : '';
+
+  card.innerHTML = `
+    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+      <div>
+        <div style="font-weight: 700; color: ${config.color}; font-size: 0.95rem;">
+          ${config.label}
+        </div>
+        <div style="color: var(--color-silver); font-size: 0.75rem; margin-top: 4px;">
+          ${timeStr}
+        </div>
+      </div>
+      <div style="background: ${status.color}; color: #000; padding: 4px 12px; border-radius: 12px; font-size: 0.75rem; font-weight: 600;">
+        ${status.label}
+      </div>
+    </div>
+
+    ${reportDetails}
+
+    <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1);">
+      <div style="color: var(--color-silver); font-size: 0.8rem;">
+        <strong>Location:</strong> ${incident.location?.address || 'No address'}
+      </div>
+      <div style="color: var(--color-silver); font-size: 0.75rem; margin-top: 4px;">
+        ID: ${incident.id.substr(0, 8).toUpperCase()}
+      </div>
+    </div>
+  `;
+
+  return card;
+}
+
 // Error Messages
 function getErrorMessage(errorCode) {
   const errorMessages = {
@@ -1021,6 +1207,463 @@ function getErrorMessage(errorCode) {
   };
 
   return errorMessages[errorCode] || 'An error occurred. Please try again.';
+}
+
+// Make loadIncidentHistory available globally for inline onclick
+window.loadIncidentHistory = loadIncidentHistory;
+
+// ==================== EMERGENCY CONTACTS ====================
+let emergencyContacts = [];
+
+async function loadEmergencyContacts() {
+  try {
+    const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+    if (userDoc.exists()) {
+      emergencyContacts = userDoc.data().emergencyContacts || [];
+      displayEmergencyContacts();
+    }
+  } catch (error) {
+    console.error('Error loading emergency contacts:', error);
+  }
+}
+
+function displayEmergencyContacts() {
+  const container = document.getElementById('contactsList');
+  const noContactsMsg = document.getElementById('noContactsMessage');
+
+  if (emergencyContacts.length === 0) {
+    container.innerHTML = '';
+    noContactsMsg.classList.remove('hidden');
+    return;
+  }
+
+  noContactsMsg.classList.add('hidden');
+  container.innerHTML = emergencyContacts.map((contact, index) => `
+    <div class="card card-metallic" style="margin-bottom: 1rem;">
+      <div style="display: flex; justify-content: space-between; align-items: start;">
+        <div style="flex: 1;">
+          <h4 style="color: var(--color-bronze); margin: 0 0 0.5rem 0;">${contact.name}</h4>
+          <p style="color: var(--color-silver); font-size: 0.875rem; margin: 0.25rem 0;">📱 ${contact.phone}</p>
+          <p style="color: var(--color-silver); font-size: 0.875rem; margin: 0.25rem 0;">👤 ${contact.relationship}</p>
+        </div>
+        <button onclick="deleteContact(${index})" class="btn btn-danger" style="padding: 0.5rem 1rem;">
+          🗑️ Delete
+        </button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function handleAddContact(e) {
+  e.preventDefault();
+
+  const name = document.getElementById('contactName').value;
+  const phone = document.getElementById('contactPhone').value;
+  const relationship = document.getElementById('contactRelationship').value;
+
+  const newContact = { name, phone, relationship };
+  emergencyContacts.push(newContact);
+
+  try {
+    await setDoc(doc(db, 'users', currentUser.uid), {
+      emergencyContacts: emergencyContacts
+    }, { merge: true });
+
+    document.getElementById('addContactForm').reset();
+    displayEmergencyContacts();
+    alert(`✓ Contact Added\n\n${name} will be notified during emergencies.`);
+  } catch (error) {
+    console.error('Error adding contact:', error);
+    emergencyContacts.pop();
+    alert('Error adding contact. Please try again.');
+  }
+}
+
+window.deleteContact = async function(index) {
+  if (!confirm(`Delete ${emergencyContacts[index].name}?`)) return;
+
+  emergencyContacts.splice(index, 1);
+
+  try {
+    await setDoc(doc(db, 'users', currentUser.uid), {
+      emergencyContacts: emergencyContacts
+    }, { merge: true });
+
+    displayEmergencyContacts();
+    alert('✓ Contact deleted');
+  } catch (error) {
+    console.error('Error deleting contact:', error);
+    alert('Error deleting contact. Please try again.');
+  }
+};
+
+// ==================== ALERT MY FAMILY ====================
+async function alertMyFamily() {
+  try {
+    // Load emergency contacts first
+    const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+    const contacts = userDoc.exists() ? (userDoc.data().emergencyContacts || []) : [];
+
+    if (contacts.length === 0) {
+      if (confirm('No emergency contacts found.\n\nWould you like to add some now?')) {
+        showScreen('emergencyContacts');
+        loadEmergencyContacts();
+      }
+      return;
+    }
+
+    if (!confirm(`⚠️ ALERT MY FAMILY\n\nThis will send SMS alerts to ${contacts.length} emergency contact(s):\n${contacts.map(c => `• ${c.name}`).join('\n')}\n\nContinue?`)) {
+      return;
+    }
+
+    showLoading();
+
+    // Get current location
+    const location = await getCurrentLocation();
+    const address = await reverseGeocodeLocation(location.latitude, location.longitude);
+
+    // Create family alert incident
+    const familyAlert = {
+      type: 'family-alert',
+      status: 'pending',
+      priority: 'high',
+      userId: currentUser.uid,
+      userEmail: currentUser.email,
+      emergencyContacts: contacts,
+      location: {
+        coordinates: {
+          lat: location.latitude,
+          lng: location.longitude,
+          accuracy: location.accuracy
+        },
+        address: address,
+        timestamp: serverTimestamp()
+      },
+      message: `EMERGENCY ALERT: ${currentUser.email} has activated Family Alert`,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    };
+
+    await addDoc(collection(db, 'familyAlerts'), familyAlert);
+
+    hideLoading();
+    alert(`✓ Family Alert Sent!\n\nYour emergency contacts have been notified:\n${contacts.map(c => `• ${c.name} (${c.phone})`).join('\n')}\n\nControl Room has also been alerted.`);
+
+  } catch (error) {
+    hideLoading();
+    console.error('Error sending family alert:', error);
+    alert('Error sending family alert. Please call your contacts manually.');
+  }
+}
+
+// ==================== LIVE LOCATION SHARING ====================
+let locationSharingActive = false;
+let locationInterval = null;
+
+async function loadLocationStatus() {
+  const statusEl = document.getElementById('locationStatus');
+  const iconEl = document.getElementById('locationIcon');
+  const btn = document.getElementById('toggleLocationBtn');
+
+  if (locationSharingActive) {
+    statusEl.textContent = '🟢 Sharing location every 30 seconds';
+    statusEl.style.color = '#34C759';
+    iconEl.textContent = '📍✅';
+    btn.textContent = '🛑 STOP SHARING';
+    btn.style.background = '#FF3B30';
+    btn.style.color = '#fff';
+    btn.style.fontWeight = '700';
+    updateCurrentLocationDisplay();
+  } else {
+    statusEl.textContent = 'Not active';
+    statusEl.style.color = '#888';
+    iconEl.textContent = '📍';
+    btn.textContent = '📍 START SHARING LOCATION';
+    btn.style.background = '#D4AF37';
+    btn.style.color = '#000';
+    btn.style.fontWeight = '700';
+  }
+}
+
+async function toggleLiveLocation() {
+  if (locationSharingActive) {
+    // Stop sharing
+    locationSharingActive = false;
+    if (locationInterval) {
+      clearInterval(locationInterval);
+      locationInterval = null;
+    }
+
+    // Update Firebase
+    try {
+      await setDoc(doc(db, 'users', currentUser.uid), {
+        liveLocation: {
+          active: false,
+          stoppedAt: serverTimestamp()
+        }
+      }, { merge: true });
+    } catch (error) {
+      console.error('Error stopping location sharing:', error);
+    }
+
+    alert('✓ Location sharing stopped');
+    loadLocationStatus();
+  } else {
+    // Start sharing
+    if (!confirm('📍 Share Live Location\n\nControl Room will see your real-time GPS position every 30 seconds.\n\nThis is useful when:\n• Walking alone at night\n• Entering unfamiliar areas\n• During emergencies\n\nContinue?')) {
+      return;
+    }
+
+    locationSharingActive = true;
+    shareLocationNow(); // Share immediately
+
+    // Then share every 30 seconds
+    locationInterval = setInterval(shareLocationNow, 30000);
+
+    alert('✓ Location sharing started\n\nControl Room can now track your movement in real-time.');
+    loadLocationStatus();
+  }
+}
+
+async function shareLocationNow() {
+  try {
+    const location = await getCurrentLocation();
+    const address = await reverseGeocodeLocation(location.latitude, location.longitude);
+
+    await setDoc(doc(db, 'users', currentUser.uid), {
+      liveLocation: {
+        active: true,
+        userEmail: currentUser.email,
+        coordinates: {
+          lat: location.latitude,
+          lng: location.longitude,
+          accuracy: location.accuracy
+        },
+        address: address,
+        timestamp: serverTimestamp()
+      }
+    }, { merge: true });
+
+    // Also add to location trail
+    await addDoc(collection(db, 'locationTrail'), {
+      userId: currentUser.uid,
+      userEmail: currentUser.email,
+      coordinates: {
+        lat: location.latitude,
+        lng: location.longitude,
+        accuracy: location.accuracy
+      },
+      address: address,
+      timestamp: serverTimestamp()
+    });
+
+    updateCurrentLocationDisplay();
+    console.log('✓ Location shared:', address);
+  } catch (error) {
+    console.error('Error sharing location:', error);
+  }
+}
+
+async function updateCurrentLocationDisplay() {
+  const container = document.getElementById('currentLocationInfo');
+  try {
+    const location = await getCurrentLocation();
+    const address = await reverseGeocodeLocation(location.latitude, location.longitude);
+
+    container.innerHTML = `
+      <div style="color: var(--color-silver); font-size: 0.875rem; line-height: 1.6;">
+        <p style="margin: 0.5rem 0;"><strong style="color: var(--color-bronze);">📍 Address:</strong><br>${address}</p>
+        <p style="margin: 0.5rem 0;"><strong style="color: var(--color-bronze);">🌐 GPS:</strong><br>Lat: ${location.latitude.toFixed(6)}, Lng: ${location.longitude.toFixed(6)}</p>
+        <p style="margin: 0.5rem 0;"><strong style="color: var(--color-bronze);">🎯 Accuracy:</strong> ${Math.round(location.accuracy)}m</p>
+        <p style="margin: 0.5rem 0; color: var(--color-success);">✓ Last updated: ${new Date().toLocaleTimeString()}</p>
+      </div>
+    `;
+  } catch (error) {
+    container.innerHTML = `<p style="color: var(--color-danger);">Error getting location</p>`;
+  }
+}
+
+// ==================== ACCOUNT LINKING ====================
+async function linkAccount() {
+  const accountNumber = prompt('🔗 Link Your Account\n\nEnter your ABC Security account number:\n(e.g., ABC-12345)');
+
+  if (!accountNumber) return;
+
+  // Validate account number format
+  if (!accountNumber.match(/^ABC-\d{5}$/)) {
+    alert('❌ Invalid Format\n\nAccount number must be in format: ABC-12345\n\nPlease try again.');
+    return;
+  }
+
+  try {
+    showLoading();
+
+    await setDoc(doc(db, 'users', currentUser.uid), {
+      accountNumber: accountNumber,
+      accountLinkedAt: serverTimestamp()
+    }, { merge: true });
+
+    hideLoading();
+
+    // Update display
+    const accountNumberEl = document.getElementById('accountNumber');
+    if (accountNumberEl) {
+      accountNumberEl.textContent = accountNumber;
+      accountNumberEl.style.color = 'var(--color-success)';
+    }
+
+    alert(`✓ Account Linked!\n\nYour account ${accountNumber} has been successfully linked.\n\nControl Room can now identify you by your account number.`);
+
+  } catch (error) {
+    hideLoading();
+    console.error('Error linking account:', error);
+    alert('❌ Error linking account. Please try again.');
+  }
+}
+
+// ==================== SAFETY CHECK-IN ====================
+let checkInActive = false;
+let checkInTimer = null;
+let checkInTimeout = null;
+
+async function loadCheckInStatus() {
+  const statusEl = document.getElementById('checkInStatus');
+  const iconEl = document.getElementById('checkInIcon');
+  const btn = document.getElementById('toggleCheckInBtn');
+
+  if (checkInActive) {
+    const interval = document.getElementById('checkInInterval').value;
+    statusEl.textContent = `🟢 Active - Checking every ${interval} min`;
+    iconEl.textContent = '✅';
+    btn.textContent = '🛑 Stop Check-In';
+    btn.style.background = 'var(--color-danger)';
+    btn.style.color = '#fff';
+  } else {
+    statusEl.textContent = 'Inactive';
+    iconEl.textContent = '⏸️';
+    btn.textContent = '🟢 Start Check-In';
+    btn.style.background = 'var(--color-success)';
+    btn.style.color = '#fff';
+  }
+}
+
+async function toggleCheckIn() {
+  if (checkInActive) {
+    // Stop check-in
+    checkInActive = false;
+    if (checkInTimer) clearInterval(checkInTimer);
+    if (checkInTimeout) clearTimeout(checkInTimeout);
+    checkInTimer = null;
+    checkInTimeout = null;
+
+    try {
+      await setDoc(doc(db, 'users', currentUser.uid), {
+        safetyCheckIn: {
+          active: false,
+          stoppedAt: serverTimestamp()
+        }
+      }, { merge: true });
+    } catch (error) {
+      console.error('Error stopping check-in:', error);
+    }
+
+    alert('✓ Safety check-in stopped');
+    loadCheckInStatus();
+  } else {
+    // Start check-in
+    const interval = parseInt(document.getElementById('checkInInterval').value);
+    const gracePeriod = parseInt(document.getElementById('checkInGracePeriod').value);
+
+    if (!confirm(`✓ Start Safety Check-In\n\nYou will be asked to check in every ${interval} minutes.\n\nIf you don't respond within ${gracePeriod} minutes, an alert will be sent to Control Room and your emergency contacts.\n\nContinue?`)) {
+      return;
+    }
+
+    checkInActive = true;
+
+    // Start check-in timer
+    checkInTimer = setInterval(() => {
+      requestCheckIn(gracePeriod);
+    }, interval * 60 * 1000);
+
+    try {
+      await setDoc(doc(db, 'users', currentUser.uid), {
+        safetyCheckIn: {
+          active: true,
+          interval: interval,
+          gracePeriod: gracePeriod,
+          startedAt: serverTimestamp()
+        }
+      }, { merge: true });
+    } catch (error) {
+      console.error('Error starting check-in:', error);
+    }
+
+    alert(`✓ Safety check-in started\n\nYou'll receive your first check-in notification in ${interval} minutes.`);
+    loadCheckInStatus();
+  }
+}
+
+function requestCheckIn(gracePeriod) {
+  const response = confirm('✓ SAFETY CHECK-IN\n\nAre you safe?\n\nPress OK to confirm you are safe.\n\nIf you do not respond within ${gracePeriod} minutes, an alert will be sent.');
+
+  if (response) {
+    // User confirmed safety
+    recordCheckIn(true);
+  } else {
+    // User needs help or timeout
+    checkInTimeout = setTimeout(() => {
+      sendCheckInAlert();
+    }, gracePeriod * 60 * 1000);
+  }
+}
+
+async function recordCheckIn(safe) {
+  try {
+    await addDoc(collection(db, 'checkIns'), {
+      userId: currentUser.uid,
+      userEmail: currentUser.email,
+      safe: safe,
+      timestamp: serverTimestamp()
+    });
+
+    if (safe) {
+      console.log('✓ Check-in recorded: User is safe');
+    }
+  } catch (error) {
+    console.error('Error recording check-in:', error);
+  }
+}
+
+async function sendCheckInAlert() {
+  try {
+    const location = await getCurrentLocation();
+    const address = await reverseGeocodeLocation(location.latitude, location.longitude);
+
+    const alert = {
+      type: 'missed-checkin',
+      status: 'pending',
+      priority: 'critical',
+      userId: currentUser.uid,
+      userEmail: currentUser.email,
+      location: {
+        coordinates: {
+          lat: location.latitude,
+          lng: location.longitude,
+          accuracy: location.accuracy
+        },
+        address: address,
+        timestamp: serverTimestamp()
+      },
+      message: 'User failed to respond to safety check-in',
+      createdAt: serverTimestamp()
+    };
+
+    await addDoc(collection(db, 'incidents'), alert);
+
+    alert('⚠️ MISSED CHECK-IN ALERT SENT\n\nControl Room and your emergency contacts have been notified that you did not respond to your safety check-in.');
+  } catch (error) {
+    console.error('Error sending check-in alert:', error);
+  }
 }
 
 // Initialize app when DOM is ready

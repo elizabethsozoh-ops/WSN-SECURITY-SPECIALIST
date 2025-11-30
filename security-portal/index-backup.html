@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ABC SECURITY - Control Room</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap"
+        rel="stylesheet">
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+    <style>
+        :root {
+            --color-bg: #0a0a0a;
+            --color-surface: rgba(20, 20, 20, 0.85);
+            --color-primary: #D4AF37;
+            --color-secondary: #C0C0C0;
+            --color-danger: #ff3b30;
+            --color-warning: #ffcc00;
+            --color-success: #34c759;
+            --glass-border: 1px solid rgba(255, 255, 255, 0.1);
+            --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--color-bg);
+            color: white;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        #map {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        .sidebar {
+            width: 420px;
+            height: 100%;
+            background: var(--color-surface);
+            backdrop-filter: blur(20px);
+            border-right: var(--glass-border);
+            pointer-events: auto;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 20px 0 50px rgba(0, 0, 0, 0.5);
+            position: fixed;
+            z-index: 2;
+        }
+
+        .header {
+            padding: 30px;
+            border-bottom: var(--glass-border);
+            background: linear-gradient(180deg, rgba(212, 175, 55, 0.05) 0%, rgba(0, 0, 0, 0) 100%);
+        }
+
+        .logo-main {
+            font-family: 'Outfit', sans-serif;
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--color-primary);
+            letter-spacing: -0.02em;
+            line-height: 1;
+            text-transform: uppercase;
+            text-shadow: 0 0 20px rgba(212, 175, 55, 0.3);
+        }
+
+        .logo-sub {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--color-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            margin-top: 8px;
+            opacity: 0.8;
+        }
+
+        .incident-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .incident-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: var(--glass-border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .incident-card:hover {
+            background: rgba(255, 255, 255, 0.08);
+            transform: translateY(-2px) scale(1.01);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .incident-card.active {
+            border-color: var(--color-danger);
+            background: linear-gradient(90deg, rgba(255, 59, 48, 0.1) 0%, rgba(0, 0, 0, 0) 100%);
+            box-shadow: 0 0 30px rgba(255, 59, 48, 0.15);
+        }
+
+        #loginOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.5s ease;
+        }
+
+        .login-box {
+            width: 400px;
+            padding: 40px;
+            background: rgba(20, 20, 20, 0.9);
+            border: 1px solid var(--color-primary);
+            border-radius: 16px;
+            text-align: center;
+            box-shadow: 0 0 100px rgba(212, 175, 55, 0.1);
+        }
+
+        .login-input {
+            width: 100%;
+            padding: 12px;
+            margin: 20px 0;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            border-radius: 8px;
+            font-size: 1rem;
+            text-align: center;
+        }
+
+        .login-input:focus {
+            outline: none;
+            border-color: var(--color-primary);
+        }
+
+        .powered-by-container {
+            position: relative;
+            display: inline-block;
+            margin-top: 5px;
+            margin-bottom: 35px;
+        }
+
+        .powered-by-text {
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 0.75rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: #888;
+            position: relative;
+            z-index: 2;
+        }
+
+        .powered-by-shadow {
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%) rotateX(60deg) scaleY(-1);
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 0.75rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.1);
+            filter: blur(2px);
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border-radius: 8px;
+            border: none;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 0.9rem;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn-primary {
+            background: var(--color-primary);
+            color: #000;
+            box-shadow: 0 0 20px rgba(212, 175, 55, 0.4);
+        }
+
+        .btn-primary:hover {
+            background: #e5c14d;
+            box-shadow: 0 0 30px rgba(212, 175, 55, 0.6);
+        }
+
+        .btn-danger {
+            background: var(--color-danger);
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Login Overlay -->
+    <div id="loginOverlay">
+        <div class="login-box">
+            <div class="logo-main" style="font-size: 1.5rem; margin-bottom: 5px;">ABC SECURITY</div>
+            <div class="powered-by-container">
+                <div class="powered-by-text">Powered by WSN GROUP</div>
+                <div class="powered-by-shadow">Powered by WSN GROUP</div>
+            </div>
+            <div class="logo-sub" style="margin-bottom: 30px; font-size: 0.9rem;">Control Room Access</div>
+            <input type="email" id="adminEmail" class="login-input" placeholder="Admin Email Address">
+            <input type="password" id="adminPassword" class="login-input" placeholder="Password"
+                onkeyup="checkEnter(event)">
+            <button class="btn btn-primary" style="width: 100%; margin-bottom: 10px;" onclick="attemptLogin()">Control
+                Room Sign In</button>
+            <button class="btn"
+                style="width: 100%; background: rgba(255,255,255,0.1); color: var(--color-primary); border: 1px solid var(--color-primary);"
+                onclick="createAdminAccount()">🔑 Create Admin Account</button>
+            <p id="loginError" style="color: var(--color-danger); margin-top: 15px; font-size: 0.9rem; display: none;">
+                Access Denied</p>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="header">
+            <div class="logo-main">ABC SECURITY</div>
+            <div class="powered-by-container" style="margin-bottom: 10px;">
+                <div class="powered-by-text">Powered by WSN GROUP</div>
+                <div class="powered-by-shadow">Powered by WSN GROUP</div>
+            </div>
+            <div class="logo-sub">Control Room</div>
+            <div id="connectionStatus" style="font-size: 0.8rem; color: #666; margin-top: 5px;">Connecting...</div>
+        </div>
+
+        <div class="stats-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; padding: 20px;">
+            <div class="stat-card"
+                style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; text-align: center;">
+                <div class="stat-value" id="activeCount" style="font-size: 1.5rem; font-weight: 700;">0</div>
+                <div class="stat-label" style="font-size: 0.7rem; color: #888; text-transform: uppercase;">Active</div>
+            </div>
+            <div class="stat-card"
+                style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; text-align: center;">
+                <div class="stat-value" id="pendingCount"
+                    style="font-size: 1.5rem; font-weight: 700; color: var(--color-warning);">0</div>
+                <div class="stat-label" style="font-size: 0.7rem; color: #888; text-transform: uppercase;">Pending</div>
+            </div>
+            <div class="stat-card"
+                style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; text-align: center;">
+                <div class="stat-value" id="unitsCount"
+                    style="font-size: 1.5rem; font-weight: 700; color: var(--color-success);">0</div>
+                <div class="stat-label" style="font-size: 0.7rem; color: #888; text-transform: uppercase;">Units</div>
+            </div>
+        </div>
+
+        <div id="incidentList" class="incident-list"></div>
+
+        <div class="controls" style="padding: 20px; border-top: var(--glass-border);">
+            <button id="stopAlarmBtn" class="btn btn-danger"
+                style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px;"
+                onclick="stopContinuousAlert()">
+                <span>🔕</span> SILENCE ALARM
+            </button>
+            <button class="btn" style="width: 100%; margin-top: 10px; background: rgba(255,255,255,0.1); color: #888;"
+                onclick="handleLogout()">
+                Log Out
+            </button>
+        </div>
+    </div>
+
+    <!-- Map Container -->
+    <div id="map"></div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, query, where, orderBy, onSnapshot, doc, setDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCqIFBd6sq46cjCCjJ2L5QXVaEsvbuGKi8",
+            authDomain: "wsn-guardian.firebaseapp.com",
+            projectId: "wsn-guardian",
+            storageBucket: "wsn-guardian.firebasestorage.app",
+            messagingSenderId: "867816848580",
+            appId: "1:867816848580:web:a356aa5d456d287feb9d91"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        const map = L.map('map').setView([-26.2041, 28.0473], 12);
+
+        const darkLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+            subdomains: 'abcd',
+            maxZoom: 20
+        });
+
+        const lightLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+            subdomains: 'abcd',
+            maxZoom: 20
+        });
+
+        const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri'
+        });
+
+        darkLayer.addTo(map);
+
+        L.control.layers({
+            "Dark Mode": darkLayer,
+            "Light Mode": lightLayer,
+            "Satellite": satelliteLayer
+        }, null, { position: 'topright' }).addTo(map);
+
+        const markers = {};
+        let audioContext = null;
+        let isAlertPlaying = false;
+        let alertInterval = null;
+        let activeOscillators = [];
+
+        function initAudioSystem() {
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            } catch (error) {
+                console.warn('Audio not available:', error);
+            }
+        }
+
+        function playAlertSound() {
+            if (!audioContext) initAudioSystem();
+            if (audioContext && audioContext.state === 'suspended') audioContext.resume();
+
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            osc.connect(gain);
+            gain.connect(audioContext.destination);
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(880, audioContext.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(440, audioContext.currentTime + 0.5);
+            gain.gain.setValueAtTime(0.5, audioContext.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+            osc.start();
+            osc.stop(audioContext.currentTime + 0.5);
+            activeOscillators.push(osc);
+            osc.onended = () => activeOscillators = activeOscillators.filter(o => o !== osc);
+        }
+
+        function startContinuousAlert() {
+            if (isAlertPlaying) return;
+            isAlertPlaying = true;
+            const btn = document.getElementById('stopAlarmBtn');
+            if (btn) {
+                btn.style.background = 'rgba(255, 59, 48, 0.8)';
+                btn.style.color = 'white';
+            }
+            playAlertSound();
+            alertInterval = setInterval(playAlertSound, 1000);
+        }
+
+        window.stopContinuousAlert = () => {
+            if (alertInterval) {
+                clearInterval(alertInterval);
+                alertInterval = null;
+            }
+            isAlertPlaying = false;
+            activeOscillators.forEach(osc => { try { osc.stop(); } catch (e) { } });
+            activeOscillators = [];
+            const btn = document.getElementById('stopAlarmBtn');
+            if (btn) {
+                btn.style.background = 'var(--color-danger)';
+                btn.style.color = 'white';
+            }
+        };
+
+        function startIncidentListener() {
+            const q = query(collection(db, 'incidents'), where('status', '==', 'pending'), orderBy('createdAt', 'desc'));
+            onSnapshot(q, (snapshot) => {
+                const active = snapshot.size;
+                document.getElementById('activeCount').textContent = active;
+                document.getElementById('pendingCount').textContent = active;
+                snapshot.docChanges().forEach((change) => {
+                    if (change.type === 'added') {
+                        addIncident({ id: change.doc.id, ...change.doc.data() });
+                        startContinuousAlert();
+                    }
+                    if (change.type === 'modified') updateIncident({ id: change.doc.id, ...change.doc.data() });
+                    if (change.type === 'removed') removeIncident(change.doc.id);
+                });

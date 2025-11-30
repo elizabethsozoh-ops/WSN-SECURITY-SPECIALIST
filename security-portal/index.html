@@ -541,11 +541,11 @@
             appId: "1:867816848580:web:a356aa5d456d287feb9d91"
         };
 
-        // Initialize Map
+        // Initialize Map - Centered on Kempton Park, South Africa
         const map = L.map('map', {
             zoomControl: false,
             maxZoom: 18
-        }).setView([-26.2041, 28.0473], 16);
+        }).setView([-26.1000, 28.2300], 13); // Kempton Park center with wider view
 
         L.control.zoom({ position: 'topright' }).addTo(map);
 
@@ -595,7 +595,8 @@
             }
         }
 
-        function playAlertSound() {
+        // SIMPLE BEEP for incident-report only
+        function playIncidentReportBeep() {
             if (!audioContext || isAlertPlaying) return;
 
             isAlertPlaying = true;
@@ -627,11 +628,60 @@
             };
         }
 
-        function startContinuousAlert() {
+        // EMERGENCY SIREN for ghost-panic, panic, medical, fire
+        function playEmergencySiren() {
+            if (!audioContext || isAlertPlaying) return;
+
+            isAlertPlaying = true;
+            const now = audioContext.currentTime;
+
+            // Create two oscillators for a more powerful siren effect
+            const osc1 = audioContext.createOscillator();
+            const osc2 = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            osc1.connect(gainNode);
+            osc2.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            // European-style two-tone police siren
+            osc1.type = 'sawtooth';
+            osc2.type = 'sawtooth';
+
+            // First tone: 660Hz
+            osc1.frequency.setValueAtTime(660, now);
+            osc2.frequency.setValueAtTime(662, now); // Slight detune for richer sound
+
+            // Second tone: 850Hz (switch at 0.5s)
+            osc1.frequency.setValueAtTime(850, now + 0.5);
+            osc2.frequency.setValueAtTime(852, now + 0.5);
+
+            // Volume envelope
+            gainNode.gain.setValueAtTime(0.9, now);
+            gainNode.gain.setValueAtTime(0.9, now + 1.0);
+            gainNode.gain.setValueAtTime(0.01, now + 1.05);
+
+            osc1.start(now);
+            osc1.stop(now + 1.05);
+            osc2.start(now);
+            osc2.stop(now + 1.05);
+
+            osc1.onended = () => {
+                isAlertPlaying = false;
+            };
+        }
+
+        function startContinuousAlert(incidentType) {
             if (alertInterval) return;
-            playAlertSound();
+
+            // Choose the correct sound based on incident type
+            const soundFunction = (incidentType === 'incident-report')
+                ? playIncidentReportBeep
+                : playEmergencySiren;
+
+            soundFunction();
             alertInterval = setInterval(() => {
-                playAlertSound();
+                soundFunction();
             }, 2000);
         }
 
@@ -665,9 +715,13 @@
 
                     if (change.type === 'added' && isActive) {
                         addIncident(incident);
-                        if (incident.type !== 'technical' && incident.type !== 'incident-report') {
-                            startContinuousAlert();
+                        // Play appropriate sound: Emergency siren for critical, beep for reports, none for technical
+                        if (incident.type === 'ghost-panic' || incident.type === 'panic' || incident.type === 'medical' || incident.type === 'fire' || incident.type === 'family-alert' || incident.type === 'missed-checkin') {
+                            startContinuousAlert('emergency');
+                        } else if (incident.type === 'incident-report') {
+                            startContinuousAlert('incident-report');
                         }
+                        // Technical has no sound
                     }
                     if (change.type === 'modified') {
                         if (isActive) {
@@ -693,12 +747,14 @@
         function getIconForType(type) {
             const baseStyle = 'width: 64px; height: 64px; object-fit: contain; background: rgba(0,0,0,0.8); padding: 8px; border-radius: 8px;';
             switch (type) {
-                case 'ghost-panic': return `<div style="${baseStyle} font-size: 48px; display: flex; align-items: center; justify-content: center;">👻</div>`;
+                case 'ghost-panic': return `<div style="${baseStyle} font-size: 48px; display: flex; align-items: center; justify-content: center; color: #8B0000;">⚠️</div>`;
                 case 'panic': return `<img src="images/armed-response.png" style="${baseStyle}">`;
                 case 'medical': return `<img src="images/medical.png" style="${baseStyle}">`;
                 case 'fire': return `<img src="images/fire.png" style="${baseStyle}">`;
                 case 'incident-report': return `<img src="images/incident-report.svg" style="${baseStyle}">`;
                 case 'technical': return `<img src="images/technical.png" style="${baseStyle}">`;
+                case 'family-alert': return `<div style="${baseStyle} font-size: 48px; display: flex; align-items: center; justify-content: center; color: #FF6B35;">👨‍👩‍👧‍👦</div>`;
+                case 'missed-checkin': return `<div style="${baseStyle} font-size: 48px; display: flex; align-items: center; justify-content: center; color: #FF3B30;">⏰</div>`;
                 default: return '⚠️';
             }
         }
@@ -714,8 +770,8 @@
 
             switch (incident.type) {
                 case 'ghost-panic':
-                    typeColor = '#8B00FF';
-                    typeLabel = '👻 GHOST PANIC - APP CLOSED ON CLIENT DEVICE';
+                    typeColor = '#8B0000';
+                    typeLabel = '⚠️ GHOST ALARM - APP CLOSED ON CLIENT DEVICE';
                     break;
                 case 'panic':
                     typeColor = '#FF3B30';
@@ -737,6 +793,14 @@
                     typeColor = '#D4AF37';
                     typeLabel = 'TECHNICAL DEPARTMENT';
                     break;
+                case 'family-alert':
+                    typeColor = '#FF6B35';
+                    typeLabel = '👨‍👩‍👧‍👦 FAMILY ALERT - EMERGENCY CONTACTS NOTIFIED';
+                    break;
+                case 'missed-checkin':
+                    typeColor = '#FF3B30';
+                    typeLabel = '⏰ MISSED SAFETY CHECK-IN - NO RESPONSE FROM USER';
+                    break;
             }
 
             const typeIcon = getIconForType(incident.type);
@@ -748,6 +812,66 @@
             card.style.borderColor = typeColor;
             card.style.boxShadow = `0 0 30px ${typeColor}40, 0 4px 15px rgba(0,0,0,0.5)`;
             card.style.borderLeft = `4px solid ${typeColor}`;
+
+            // Build incident report details if it's an incident report
+            const reportDetailsHTML = incident.type === 'incident-report' ? `
+                <div style="background: rgba(155,89,182,0.1); border: 1px solid rgba(155,89,182,0.3); border-radius: 8px; padding: 12px; margin: 12px 0;">
+                    <div style="font-weight: 700; color: #9B59B6; margin-bottom: 8px; font-size: 0.9rem;">
+                        📋 Report Category: ${incident.reportCategory || 'Unknown'}
+                    </div>
+                    <div style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 6px; margin-top: 8px;">
+                        <div style="font-weight: 600; color: #C0C0C0; margin-bottom: 6px; font-size: 0.85rem;">Description:</div>
+                        <div style="color: #fff; font-size: 0.9rem; line-height: 1.4; max-height: 150px; overflow-y: auto;">
+                            ${incident.reportDescription || 'No description provided'}
+                        </div>
+                    </div>
+                    ${incident.reportLocation ? `
+                        <div style="margin-top: 8px;">
+                            <span style="color: #9B59B6; font-weight: 600; font-size: 0.85rem;">📍 Specific Location:</span>
+                            <span style="color: #C0C0C0; font-size: 0.85rem;"> ${incident.reportLocation}</span>
+                        </div>
+                    ` : ''}
+                </div>
+            ` : '';
+
+            // Build family alert details
+            const familyAlertHTML = incident.type === 'family-alert' ? `
+                <div style="background: rgba(255,107,53,0.1); border: 1px solid rgba(255,107,53,0.3); border-radius: 8px; padding: 12px; margin: 12px 0;">
+                    <div style="font-weight: 700; color: #FF6B35; margin-bottom: 8px; font-size: 0.9rem;">
+                        👨‍👩‍👧‍👦 Emergency Contacts Notified:
+                    </div>
+                    ${incident.emergencyContacts && incident.emergencyContacts.length > 0 ? `
+                        <div style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 6px;">
+                            ${incident.emergencyContacts.map(contact => `
+                                <div style="color: #fff; font-size: 0.85rem; margin: 6px 0; display: flex; justify-content: space-between;">
+                                    <span>${contact.name} (${contact.relationship})</span>
+                                    <a href="tel:${contact.phone}" style="color: var(--color-primary); text-decoration: none;">${contact.phone}</a>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : '<div style="color: #888; font-size: 0.85rem;">No emergency contacts configured</div>'}
+                    <div style="margin-top: 8px; color: #FF6B35; font-weight: 600; font-size: 0.85rem;">
+                        ⚠️ User manually triggered family alert
+                    </div>
+                </div>
+            ` : '';
+
+            // Build missed check-in details
+            const missedCheckInHTML = incident.type === 'missed-checkin' ? `
+                <div style="background: rgba(255,59,48,0.1); border: 1px solid rgba(255,59,48,0.3); border-radius: 8px; padding: 12px; margin: 12px 0;">
+                    <div style="font-weight: 700; color: #FF3B30; margin-bottom: 8px; font-size: 0.9rem;">
+                        ⏰ Safety Check-In Alert
+                    </div>
+                    <div style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 6px;">
+                        <div style="color: #fff; font-size: 0.9rem; line-height: 1.4;">
+                            User failed to respond to automated safety check-in.
+                        </div>
+                        <div style="color: #FF3B30; font-size: 0.85rem; margin-top: 8px; font-weight: 600;">
+                            ⚠️ WELFARE CHECK REQUIRED
+                        </div>
+                    </div>
+                </div>
+            ` : '';
 
             card.innerHTML = `
                 <div class="card-header">
@@ -778,6 +902,9 @@
                         <span class="info-label">Status</span>
                         <span class="info-value" id="status-${incident.id}" style="color: var(--color-warning); font-weight: 700;">⏳ PENDING</span>
                     </div>
+                    ${reportDetailsHTML}
+                    ${familyAlertHTML}
+                    ${missedCheckInHTML}
                 </div>
                 <div class="card-actions" style="flex-direction: column; gap: 8px;">
                     <button class="btn btn-danger" onclick="acknowledgeIncident('${incident.id}')" style="width: 100%; background: var(--color-warning); color: #000; font-weight: 700;">
@@ -1266,6 +1393,147 @@
             alert('📥 EXPORT HANDOVER REPORT\n\nExporting handover report to PDF...\n\nThis feature requires a PDF library integration.\nFor now, you can use browser print (Ctrl+P) to save as PDF.');
             window.print();
         };
+
+        // ==================== LIVE LOCATION TRACKING ====================
+        const liveLocationMarkers = {};
+        const locationTrails = {};
+
+        function startLiveLocationListener() {
+            // Listen for users with active live location sharing
+            const usersRef = collection(db, 'users');
+
+            onSnapshot(usersRef, (snapshot) => {
+                console.log('📍 Live location listener triggered, checking', snapshot.size, 'users');
+                snapshot.forEach((doc) => {
+                    const userData = doc.data();
+                    const userId = doc.id;
+
+                    if (userData.liveLocation && userData.liveLocation.active) {
+                        console.log('✅ User sharing location:', userData.liveLocation.userEmail || userId, userData.liveLocation);
+                        updateLiveLocationMarker(userId, userData);
+                    } else {
+                        // Remove marker if user stopped sharing
+                        if (liveLocationMarkers[userId]) {
+                            console.log('🛑 User stopped sharing:', userId);
+                            map.removeLayer(liveLocationMarkers[userId]);
+                            delete liveLocationMarkers[userId];
+                        }
+                        if (locationTrails[userId]) {
+                            map.removeLayer(locationTrails[userId]);
+                            delete locationTrails[userId];
+                        }
+                    }
+                });
+            });
+
+            // Listen for location trail updates
+            const trailQuery = query(
+                collection(db, 'locationTrail'),
+                orderBy('timestamp', 'desc')
+            );
+
+            onSnapshot(trailQuery, (snapshot) => {
+                snapshot.docChanges().forEach((change) => {
+                    if (change.type === 'added') {
+                        const trail = change.doc.data();
+                        addToLocationTrail(trail.userId, trail);
+                    }
+                });
+            });
+        }
+
+        function updateLiveLocationMarker(userId, userData) {
+            const coords = userData.liveLocation.coordinates;
+            if (!coords) {
+                console.warn('⚠️ No coordinates for user:', userId);
+                return;
+            }
+
+            const lat = coords.lat;
+            const lng = coords.lng;
+
+            console.log('📍 Creating/updating marker at:', lat, lng, 'for user:', userData.liveLocation.userEmail);
+
+            // Create or update marker
+            if (liveLocationMarkers[userId]) {
+                console.log('🔄 Updating existing marker');
+                liveLocationMarkers[userId].setLatLng([lat, lng]);
+            } else {
+                console.log('✨ Creating new marker');
+                const liveIcon = L.divIcon({
+                    html: `<div style="background: #007AFF; width: 24px; height: 24px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 20px rgba(0,122,255,0.8); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 12px; animation: pulse 2s infinite;">📍</div>`,
+                    className: '',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+
+                const marker = L.marker([lat, lng], { icon: liveIcon }).addTo(map);
+                marker.bindPopup(`
+                    <div style="font-family: 'Inter'; text-align: center;">
+                        <strong style="color: #007AFF; font-size: 1.1em;">🔴 LIVE LOCATION</strong><br>
+                        <span style="color: #666;">${userData.liveLocation.userEmail || 'Unknown User'}</span><br>
+                        <span style="font-size: 0.85em; color: #888;">${userData.liveLocation.address || 'No address'}</span><br>
+                        <span style="font-size: 0.75em; color: #aaa;">Updated: ${userData.liveLocation.timestamp?.toDate ? userData.liveLocation.timestamp.toDate().toLocaleTimeString() : 'Just now'}</span>
+                    </div>
+                `);
+
+                liveLocationMarkers[userId] = marker;
+                console.log('✅ Marker created successfully');
+            }
+
+            // Update popup
+            const accountInfo = userData.accountNumber
+                ? `<span style="color: #34C759; font-weight: 600;">Account: ${userData.accountNumber}</span><br>`
+                : '';
+
+            liveLocationMarkers[userId].setPopupContent(`
+                <div style="font-family: 'Inter'; text-align: center;">
+                    <strong style="color: #007AFF; font-size: 1.1em;">🔴 LIVE LOCATION</strong><br>
+                    ${accountInfo}
+                    <span style="color: #666;">${userData.liveLocation.userEmail || 'Unknown User'}</span><br>
+                    <span style="font-size: 0.85em; color: #888;">${userData.liveLocation.address || 'No address'}</span><br>
+                    <span style="font-size: 0.75em; color: #aaa;">Updated: ${userData.liveLocation.timestamp?.toDate ? userData.liveLocation.timestamp.toDate().toLocaleTimeString() : 'Just now'}</span>
+                </div>
+            `);
+        }
+
+        function addToLocationTrail(userId, trailPoint) {
+            if (!trailPoint.coordinates) return;
+
+            const lat = trailPoint.coordinates.lat;
+            const lng = trailPoint.coordinates.lng;
+
+            if (!locationTrails[userId]) {
+                locationTrails[userId] = {
+                    points: [],
+                    polyline: null
+                };
+            }
+
+            locationTrails[userId].points.push([lat, lng]);
+
+            // Only keep last 50 points to avoid performance issues
+            if (locationTrails[userId].points.length > 50) {
+                locationTrails[userId].points.shift();
+            }
+
+            // Update or create polyline
+            if (locationTrails[userId].polyline) {
+                map.removeLayer(locationTrails[userId].polyline);
+            }
+
+            locationTrails[userId].polyline = L.polyline(locationTrails[userId].points, {
+                color: '#007AFF',
+                weight: 3,
+                opacity: 0.6,
+                dashArray: '10, 5'
+            }).addTo(map);
+        }
+
+        // Start live location tracking when page loads
+        setTimeout(() => {
+            startLiveLocationListener();
+        }, 2000);
 
     </script>
 </body>

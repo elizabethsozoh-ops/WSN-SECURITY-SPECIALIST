@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Setup Mock Accounts</title>
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+        import { getFirestore, doc, setDoc, collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCXGxBXWlJO6B_b5xqEr4kLTHCwT3TBzyA",
+            authDomain: "wsn-guardian.firebaseapp.com",
+            projectId: "wsn-guardian",
+            storageBucket: "wsn-guardian.firebasestorage.app",
+            messagingSenderId: "867816848580",
+            appId: "1:867816848580:web:a356aa5d456d287feb9d91"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        window.setupAccounts = async function() {
+            try {
+                console.log('Setting up mock accounts...');
+
+                // Get all users
+                const usersSnapshot = await getDocs(collection(db, 'users'));
+
+                const accountMappings = {
+                    'skylupa@gmail.com': 'ABC-10001',
+                    'elizabeth@example.com': 'ABC-10002'
+                };
+
+                let updated = 0;
+
+                for (const userDoc of usersSnapshot.docs) {
+                    const userData = userDoc.data();
+                    const email = userData.email;
+
+                    if (accountMappings[email]) {
+                        await setDoc(doc(db, 'users', userDoc.id), {
+                            accountNumber: accountMappings[email]
+                        }, { merge: true });
+
+                        console.log(`✓ Updated ${email} with account ${accountMappings[email]}`);
+                        updated++;
+                    }
+                }
+
+                document.getElementById('result').innerHTML = `
+                    <div style="background: #34C759; color: white; padding: 20px; border-radius: 8px; margin-top: 20px;">
+                        <h2>✓ Success!</h2>
+                        <p>Updated ${updated} user account(s):</p>
+                        <ul>
+                            ${Object.entries(accountMappings).map(([email, acc]) =>
+                                `<li>${email} → ${acc}</li>`
+                            ).join('')}
+                        </ul>
+                        <p style="margin-top: 20px; font-size: 14px;">You can now close this page and refresh the client app.</p>
+                    </div>
+                `;
+
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('result').innerHTML = `
+                    <div style="background: #FF3B30; color: white; padding: 20px; border-radius: 8px; margin-top: 20px;">
+                        <h2>❌ Error</h2>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        };
+    </script>
+</head>
+<body style="font-family: Arial; max-width: 600px; margin: 50px auto; padding: 20px;">
+    <h1>🔗 Setup Mock Account Numbers</h1>
+    <p>This will add account numbers to existing test users:</p>
+    <ul>
+        <li>skylupa@gmail.com → ABC-10001</li>
+        <li>elizabeth@example.com → ABC-10002</li>
+    </ul>
+    <button onclick="setupAccounts()" style="background: #D4AF37; color: #000; border: none; padding: 15px 30px; font-size: 16px; font-weight: 700; border-radius: 8px; cursor: pointer;">
+        🚀 Setup Accounts
+    </button>
+    <div id="result"></div>
+</body>
+</html>

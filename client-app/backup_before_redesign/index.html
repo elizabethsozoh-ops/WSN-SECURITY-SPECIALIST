@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="ABC Security - Emergency Response Platform">
+  <meta name="theme-color" content="#0a0a0a">
+
+  <!-- PWA Meta Tags -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+  <title>SSS Guardian - Powered by WSN Security</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap"
+    rel="stylesheet">
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body>
+  <div class="app-wrapper" id="app">
+    <!-- Loading Screen -->
+    <div class="loading-overlay" id="loadingScreen">
+      <div class="spinner"></div>
+      <p>Loading ABC Security...</p>
+    </div>
+
+    <!-- Login Screen -->
+    <div class="container hidden" id="loginScreen">
+      <div class="app-header">
+        <h1 class="app-title" id="appTitle" style="font-size: 2.5rem;">ABC SECURITY</h1>
+        <p class="app-tagline"><span style="font-size: 0.8em;">Powered by WSN GROUP</span></p>
+      </div>
+
+      <div class="card card-metallic">
+        <h2 class="text-center mb-md">Secure Login</h2>
+
+        <form id="loginForm">
+          <div class="form-group">
+            <label for="loginEmail" class="form-label">Email Address</label>
+            <input type="email" id="loginEmail" class="form-input" placeholder="your@email.com" required>
+          </div>
+
+          <div class="form-group">
+            <label for="loginPassword" class="form-label">Password</label>
+            <input type="password" id="loginPassword" class="form-input" placeholder="••••••••" required>
+          </div>
+
+          <div id="loginError" class="text-error text-center mb-sm hidden"></div>
+
+          <button type="submit" class="btn btn-primary btn-full btn-lg">
+            🔐 Secure Login
+          </button>
+        </form>
+
+        <div class="text-center mt-md">
+          <p class="text-silver">First time user?</p>
+          <button class="btn btn-secondary mt-sm" id="showRegisterBtn">
+            Create Account
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Registration Screen -->
+    <div class="container hidden" id="registerScreen">
+      <div class="app-header">
+        <h1 class="app-title">Create Account</h1>
+        <p class="app-tagline">Join SSS Guardian</p>
+      </div>
+
+      <div class="card card-metallic">
+        <form id="registerForm">
+          <div class="form-group">
+            <label for="regFirstName" class="form-label">First Name</label>
+            <input type="text" id="regFirstName" class="form-input" placeholder="John" required>
+          </div>
+
+          <div class="form-group">
+            <label for="regLastName" class="form-label">Last Name</label>
+            <input type="text" id="regLastName" class="form-input" placeholder="Doe" required>
+          </div>
+
+          <div class="form-group">
+            <label for="regEmail" class="form-label">Email Address</label>
+            <input type="email" id="regEmail" class="form-input" placeholder="your@email.com" required>
+          </div>
+
+          <div class="form-group">
+            <label for="regPhone" class="form-label">Phone Number</label>
+            <input type="tel" id="regPhone" class="form-input" placeholder="+27 82 123 4567" required>
+          </div>
+
+          <div class="form-group">
+            <label for="regAddress" class="form-label">Home Address</label>
+            <input type="text" id="regAddress" class="form-input" placeholder="123 Main Road, Kempton Park" required>
+          </div>
+
+          <div class="form-group">
+            <label for="regPassword" class="form-label">Password</label>
+            <input type="password" id="regPassword" class="form-input" placeholder="••••••••" required minlength="6">
+          </div>
+
+          <div id="registerError" class="text-error text-center mb-sm hidden"></div>
+
+          <button type="submit" class="btn btn-primary btn-full btn-lg">
+            ✓ Create Account
+          </button>
+        </form>
+
+        <div class="text-center mt-md">
+          <button class="btn btn-secondary" id="showLoginBtn">
+            ← Back to Login
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Dashboard -->
+    <div class="container hidden" id="dashboardScreen">
+      <div class="app-header">
+        <h2 class="text-center" id="welcomeMessage">Welcome, User</h2>
+        <p class="text-silver text-center">Emergency Response</p>
+        <div class="text-center mt-sm">
+          <button class="btn btn-secondary" id="logoutBtn"
+            style="padding: 0.5rem 1rem; font-size: 0.875rem;">Logout</button>
+        </div>
+      </div>
+
+      <!-- Emergency Buttons -->
+      <div class="emergency-grid">
+        <button class="emergency-button btn-panic" data-type="panic">
+          <img src="images/armed-response.png" alt="PANIC!!!!" class="emergency-icon">
+          <div class="emergency-text">
+            <span class="emergency-label">PANIC!!!!</span>
+            <span class="emergency-sublabel">Immediate Dispatch</span>
+          </div>
+        </button>
+
+        <button class="emergency-button btn-medical" data-type="medical">
+          <img src="images/medical.png" alt="Medical Emergency" class="emergency-icon">
+          <div class="emergency-text">
+            <span class="emergency-label">MEDICAL ASSISTANCE</span>
+            <span class="emergency-sublabel">Paramedic Response</span>
+          </div>
+        </button>
+
+        <button class="emergency-button btn-fire" data-type="fire">
+          <img src="images/fire.png" alt="Fire & Rescue" class="emergency-icon">
+          <div class="emergency-text">
+            <span class="emergency-label">Fire & Rescue</span>
+            <span class="emergency-sublabel">Fire Department</span>
+          </div>
+        </button>
+
+        <button class="emergency-button btn-technical" data-type="technical">
+          <img src="images/technical.png" alt="Technical Support" class="emergency-icon">
+          <div class="emergency-text">
+            <span class="emergency-label">TECHNICAL DEPARTMENT</span>
+            <span class="emergency-sublabel">Non-Emergency</span>
+          </div>
+        </button>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="card mt-lg">
+        <h3 class="mb-md">Quick Actions</h3>
+        <div class="flex flex-column gap-sm">
+          <button class="btn btn-secondary btn-full" id="viewHistoryBtn">
+            📜 View Incident History
+          </button>
+          <button class="btn btn-secondary btn-full" id="manageDependantsBtn">
+            👥 Manage Dependants
+          </button>
+          <button class="btn btn-secondary btn-full" id="callControlBtn">
+            📞 Call Control Room
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Active Incident Screen -->
+    <div class="container hidden" id="incidentScreen">
+      <div class="app-header">
+        <h2 class="text-center">🚨 Emergency Active</h2>
+        <div class="flex justify-center mt-sm">
+          <span class="status-badge status-dispatched" id="incidentStatus">
+            <span class="status-dot"></span>
+            Dispatching...
+          </span>
+        </div>
+      </div>
+
+      <div class="card card-metallic">
+        <h3 class="text-center mb-md" id="incidentType">Armed Response</h3>
+
+        <div class="incident-info">
+          <div class="info-row">
+            <span class="info-label">Incident ID:</span>
+            <span class="info-value" id="incidentId">Loading...</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Status:</span>
+            <span class="info-value" id="incidentStatusText">Pending</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Location:</span>
+            <span class="info-value" id="incidentLocation">Fetching GPS...</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Time:</span>
+            <span class="info-value" id="incidentTime">Just now</span>
+          </div>
+        </div>
+
+        <!-- Map Placeholder -->
+        <div class="map-container mt-md" id="incidentMap">
+          <div class="map-placeholder">
+            <p class="text-center text-silver">📍 Live GPS Tracking</p>
+            <p class="text-center" style="font-size: 0.875rem;">Map will load here</p>
+          </div>
+        </div>
+
+        <!-- Unit Info (shown when dispatched) -->
+        <div class="hidden mt-md" id="unitInfo">
+          <h4 class="text-bronze mb-sm">Responding Unit</h4>
+          <div class="info-row">
+            <span class="info-label">Unit:</span>
+            <span class="info-value" id="unitName">-</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Officer:</span>
+            <span class="info-value" id="officerName">-</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">ETA:</span>
+            <span class="info-value" id="unitETA">-</span>
+          </div>
+        </div>
+
+        <div class="flex flex-column gap-sm mt-lg">
+          <button class="btn btn-secondary btn-full" id="callUnitBtn">
+            📞 Call Responding Unit
+          </button>
+          <button class="btn btn-secondary btn-full" id="cancelIncidentBtn">
+            ✕ Cancel (False Alarm)
+          </button>
+        </div>
+      </div>
+
+      <div class="text-center mt-md">
+        <button class="btn btn-secondary" id="backToDashboardBtn">
+          ← Back to Dashboard
+        </button>
+      </div>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav hidden" id="bottomNav">
+      <a href="#" class="nav-item active" data-screen="dashboard">
+        <span class="nav-icon">🏠</span>
+        <span>Home</span>
+      </a>
+      <a href="#" class="nav-item" data-screen="history">
+        <span class="nav-icon">📜</span>
+        <span>History</span>
+      </a>
+      <a href="#" class="nav-item" data-screen="profile">
+        <span class="nav-icon">👤</span>
+        <span>Profile</span>
+      </a>
+      <a href="#" class="nav-item" data-screen="settings">
+        <span class="nav-icon">⚙️</span>
+        <span>Settings</span>
+      </a>
+    </nav>
+  </div>
+
+  <!-- Scripts -->
+  <script type="module" src="js/app-production.js?v=5"></script>
+
+  <style>
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      padding: var(--spacing-sm) 0;
+      border-bottom: 1px solid var(--color-black-lighter);
+    }
+
+    .info-row:last-child {
+      border-bottom: none;
+    }
+
+    .info-label {
+      color: var(--color-silver);
+      font-weight: 600;
+      font-size: 0.875rem;
+    }
+
+    .info-value {
+      color: var(--color-bronze);
+      font-weight: 600;
+    }
+
+    .map-container {
+      background: var(--color-black);
+      border: 1px solid var(--color-bronze);
+      border-radius: var(--radius-md);
+      height: 300px;
+      overflow: hidden;
+    }
+
+    .map-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      padding: var(--spacing-lg);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+      display: inline-block;
+      animation: blink 1.5s infinite;
+    }
+
+    @keyframes blink {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.3;
+      }
+    }
+  </style>
+</body>
+
+</html>

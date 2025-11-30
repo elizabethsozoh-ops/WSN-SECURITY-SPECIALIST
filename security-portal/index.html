@@ -370,9 +370,18 @@
     <div class="ui-layer">
         <div class="sidebar">
             <div class="sidebar-header">
-                <div class="logo-container">
-                    <div class="logo-main">ABC SECURITY</div>
-                    <div class="logo-sub">Powered by WSN GROUP</div>
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 20px;">
+                    <div class="logo-container">
+                        <div class="logo-main">ABC SECURITY</div>
+                        <div class="logo-sub">Powered by WSN GROUP</div>
+                    </div>
+                    <button id="logoutBtn" style="background: rgba(255,59,48,0.2); color: #FF3B30; border: 1px solid #FF3B30; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.875rem;">
+                        Logout
+                    </button>
+                </div>
+                <div id="adminInfo" style="background: rgba(212,175,55,0.1); border: 1px solid rgba(212,175,55,0.3); border-radius: 6px; padding: 8px 12px; margin-bottom: 15px; display: none;">
+                    <div style="font-size: 0.75rem; color: var(--color-primary); font-weight: 600;">Logged in as:</div>
+                    <div id="adminEmail" style="font-size: 0.875rem; color: var(--color-secondary);"></div>
                 </div>
                 <div class="status-bar">
                     <div class="status-dot"></div>
@@ -528,7 +537,7 @@
     <!-- Firebase Logic -->
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+        import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
         import { getFirestore, collection, query, where, orderBy, onSnapshot, doc, getDoc, getDocs, setDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
         // Firebase Config
@@ -1153,17 +1162,54 @@
             }
         };
 
-        onAuthStateChanged(auth, (user) => {
+        onAuthStateChanged(auth, async (user) => {
             if (user) {
-                const overlay = document.getElementById('loginOverlay');
-                overlay.style.opacity = '0';
-                setTimeout(() => overlay.style.display = 'none', 500);
-                startIncidentListener();
-                initializeAnalytics();
+                // Check if user has admin role
+                try {
+                    const userDoc = await getDoc(doc(db, 'users', user.uid));
+                    const userData = userDoc.data();
+
+                    if (!userData || userData.role !== 'admin') {
+                        console.error('Access denied: User is not an admin');
+                        alert('❌ Access Denied\n\nYou do not have admin access to the Control Room.\n\nOnly security personnel with admin role can access this system.');
+                        await auth.signOut();
+                        return;
+                    }
+
+                    // User is admin - show control room
+                    const overlay = document.getElementById('loginOverlay');
+                    overlay.style.opacity = '0';
+                    setTimeout(() => overlay.style.display = 'none', 500);
+
+                    // Show admin info
+                    document.getElementById('adminEmail').textContent = user.email;
+                    document.getElementById('adminInfo').style.display = 'block';
+
+                    startIncidentListener();
+                    initializeAnalytics();
+                } catch (error) {
+                    console.error('Error checking admin role:', error);
+                    alert('Error checking permissions. Please try again.');
+                    await auth.signOut();
+                }
             } else {
                 document.getElementById('loginOverlay').style.display = 'flex';
                 document.getElementById('connectionStatus').textContent = 'Not Authenticated';
                 document.getElementById('connectionStatus').style.color = '#ff3b30';
+                document.getElementById('adminInfo').style.display = 'none';
+            }
+        });
+
+        // Logout handler
+        document.getElementById('logoutBtn')?.addEventListener('click', async () => {
+            if (confirm('⚠️ Logout\n\nAre you sure you want to logout from the Control Room?')) {
+                try {
+                    await auth.signOut();
+                    window.location.reload();
+                } catch (error) {
+                    console.error('Logout error:', error);
+                    alert('Error logging out. Please try again.');
+                }
             }
         });
 

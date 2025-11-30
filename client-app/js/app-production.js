@@ -394,12 +394,15 @@ async function loadUserProfile(userId) {
       const userData = userDoc.data();
       const profile = userData.profile || {};
 
-      // Auto-assign mock account numbers for test users
+      // Auto-assign mock account numbers and roles for test users
       const mockAccounts = {
         'skylupa@gmail.com': 'ABC-10001',
         'elizabeth@example.com': 'ABC-10002'
       };
 
+      const adminUsers = ['controller@abcsecurity.com', 'admin@abcsecurity.com'];
+
+      // Auto-assign account number
       if (!userData.accountNumber && mockAccounts[currentUser.email]) {
         console.log('🔗 Auto-assigning account number for test user:', currentUser.email);
         await setDoc(userDocRef, {
@@ -407,6 +410,16 @@ async function loadUserProfile(userId) {
           accountLinkedAt: serverTimestamp()
         }, { merge: true });
         userData.accountNumber = mockAccounts[currentUser.email];
+      }
+
+      // Auto-assign admin role
+      if (!userData.role && adminUsers.includes(currentUser.email)) {
+        console.log('👑 Auto-assigning admin role to:', currentUser.email);
+        await setDoc(userDocRef, {
+          role: 'admin',
+          roleAssignedAt: serverTimestamp()
+        }, { merge: true });
+        userData.role = 'admin';
       }
 
       // Update welcome message

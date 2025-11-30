@@ -1461,10 +1461,18 @@ async function shareLocationNow() {
     const location = await getCurrentLocation();
     const address = await reverseGeocodeLocation(location.latitude, location.longitude);
 
+    // Get user data to include account number
+    const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+    const userData = userDoc.data() || {};
+    const accountNumber = userData.accountNumber || 'Not Linked';
+
+    console.log('📍 Sharing location with account:', accountNumber);
+
     await setDoc(doc(db, 'users', currentUser.uid), {
       liveLocation: {
         active: true,
         userEmail: currentUser.email,
+        accountNumber: accountNumber,
         coordinates: {
           lat: location.latitude,
           lng: location.longitude,
@@ -1479,6 +1487,7 @@ async function shareLocationNow() {
     await addDoc(collection(db, 'locationTrail'), {
       userId: currentUser.uid,
       userEmail: currentUser.email,
+      accountNumber: accountNumber,
       coordinates: {
         lat: location.latitude,
         lng: location.longitude,
@@ -1489,7 +1498,7 @@ async function shareLocationNow() {
     });
 
     updateCurrentLocationDisplay();
-    console.log('✓ Location shared:', address);
+    console.log('✓ Location shared:', address, '| Account:', accountNumber);
   } catch (error) {
     console.error('Error sharing location:', error);
   }
@@ -1516,40 +1525,107 @@ async function updateCurrentLocationDisplay() {
 
 // ==================== ACCOUNT LINKING ====================
 async function linkAccount() {
-  const accountNumber = prompt('🔗 Link Your Account\n\nEnter your ABC Security account number:\n(e.g., ABC-12345)');
+  // Create a custom dialog
+  const dialog = document.createElement('div');
+  dialog.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    padding: 20px;
+  `;
 
-  if (!accountNumber) return;
+  dialog.innerHTML = `
+    <div style="background: var(--color-dark); border: 2px solid var(--color-bronze); border-radius: 12px; padding: 24px; max-width: 400px; width: 100%;">
+      <h3 style="color: var(--color-bronze); margin: 0 0 8px 0; font-size: 1.25rem;">🔗 Link Your Account</h3>
+      <p style="color: var(--color-silver); margin: 0 0 16px 0; font-size: 0.875rem;">Enter your ABC Security account number:</p>
+      <p style="color: #888; margin: 0 0 16px 0; font-size: 0.75rem;">(e.g., ABC-12345)</p>
+      <input type="text" id="accountInput" placeholder="ABC-12345" style="width: 100%; padding: 12px; background: rgba(0,0,0,0.5); border: 1px solid var(--color-bronze); border-radius: 6px; color: var(--color-silver); font-size: 1rem; font-family: monospace; text-transform: uppercase; margin-bottom: 16px;" />
+      <div style="display: flex; gap: 8px;">
+        <button id="cancelBtn" style="flex: 1; padding: 12px; background: rgba(255,59,48,0.2); color: #FF3B30; border: 1px solid #FF3B30; border-radius: 6px; font-weight: 600; cursor: pointer;">Cancel</button>
+        <button id="confirmBtn" style="flex: 1; padding: 12px; background: var(--color-bronze); color: #000; border: none; border-radius: 6px; font-weight: 700; cursor: pointer;">OK</button>
+      </div>
+      <div id="linkError" style="color: #FF3B30; margin-top: 12px; font-size: 0.875rem; display: none;"></div>
+    </div>
+  `;
 
-  // Validate account number format
-  if (!accountNumber.match(/^ABC-\d{5}$/)) {
-    alert('❌ Invalid Format\n\nAccount number must be in format: ABC-12345\n\nPlease try again.');
-    return;
-  }
+  document.body.appendChild(dialog);
 
-  try {
-    showLoading();
+  const input = dialog.querySelector('#accountInput');
+  const confirmBtn = dialog.querySelector('#confirmBtn');
+  const cancelBtn = dialog.querySelector('#cancelBtn');
+  const errorDiv = dialog.querySelector('#linkError');
 
-    await setDoc(doc(db, 'users', currentUser.uid), {
-      accountNumber: accountNumber,
-      accountLinkedAt: serverTimestamp()
-    }, { merge: true });
+  // Focus input
+  setTimeout(() => input.focus(), 100);
 
-    hideLoading();
+  // Handle cancel
+  cancelBtn.onclick = () => {
+    document.body.removeChild(dialog);
+  };
 
-    // Update display
-    const accountNumberEl = document.getElementById('accountNumber');
-    if (accountNumberEl) {
-      accountNumberEl.textContent = accountNumber;
-      accountNumberEl.style.color = 'var(--color-success)';
+  // Handle confirm
+  confirmBtn.onclick = async () => {
+    const accountNumber = input.value.trim().toUpperCase();
+
+    if (!accountNumber) {
+      errorDiv.textContent = 'Please enter an account number';
+      errorDiv.style.display = 'block';
+      return;
     }
 
-    alert(`✓ Account Linked!\n\nYour account ${accountNumber} has been successfully linked.\n\nControl Room can now identify you by your account number.`);
+    // Validate account number format
+    if (!accountNumber.match(/^ABC-\d{5}$/)) {
+      errorDiv.textContent = 'Invalid format. Must be: ABC-12345';
+      errorDiv.style.display = 'block';
+      return;
+    }
 
-  } catch (error) {
-    hideLoading();
-    console.error('Error linking account:', error);
-    alert('❌ Error linking account. Please try again.');
-  }
+    try {
+      confirmBtn.textContent = 'Linking...';
+      confirmBtn.disabled = true;
+
+      await setDoc(doc(db, 'users', currentUser.uid), {
+        accountNumber: accountNumber,
+        accountLinkedAt: serverTimestamp()
+      }, { merge: true });
+
+      // Update display
+      const accountNumberEl = document.getElementById('accountNumber');
+      if (accountNumberEl) {
+        accountNumberEl.textContent = accountNumber;
+        accountNumberEl.style.color = 'var(--color-success)';
+      }
+
+      // Close dialog
+      document.body.removeChild(dialog);
+
+      // Show success
+      alert(`✓ Account Linked!\n\nYour account ${accountNumber} has been successfully linked.\n\nControl Room can now identify you by your account number.`);
+
+      console.log('✓ Account linked successfully:', accountNumber);
+
+    } catch (error) {
+      console.error('Error linking account:', error);
+      errorDiv.textContent = 'Error linking account. Please try again.';
+      errorDiv.style.display = 'block';
+      confirmBtn.textContent = 'OK';
+      confirmBtn.disabled = false;
+    }
+  };
+
+  // Handle Enter key
+  input.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      confirmBtn.click();
+    }
+  });
 }
 
 // ==================== SAFETY CHECK-IN ====================

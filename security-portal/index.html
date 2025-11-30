@@ -1530,9 +1530,16 @@
                 });
 
                 const marker = L.marker([lat, lng], { icon: liveIcon }).addTo(map);
+
+                // Get account number for initial popup
+                const initAccountNumber = userData.liveLocation.accountNumber || userData.accountNumber || 'Not Linked';
+                const initAccountColor = initAccountNumber === 'Not Linked' ? '#FF9500' : '#34C759';
+                const initAccountInfo = `<div style="background: rgba(212,175,55,0.2); padding: 4px 8px; border-radius: 4px; margin: 4px 0;"><span style="color: ${initAccountColor}; font-weight: 700; font-size: 0.9em;">Account: ${initAccountNumber}</span></div>`;
+
                 marker.bindPopup(`
                     <div style="font-family: 'Inter'; text-align: center;">
                         <strong style="color: #007AFF; font-size: 1.1em;">🔴 LIVE LOCATION</strong><br>
+                        ${initAccountInfo}
                         <span style="color: #666;">${userData.liveLocation.userEmail || 'Unknown User'}</span><br>
                         <span style="font-size: 0.85em; color: #888;">${userData.liveLocation.address || 'No address'}</span><br>
                         <span style="font-size: 0.75em; color: #aaa;">Updated: ${userData.liveLocation.timestamp?.toDate ? userData.liveLocation.timestamp.toDate().toLocaleTimeString() : 'Just now'}</span>
@@ -1540,13 +1547,13 @@
                 `);
 
                 liveLocationMarkers[userId] = marker;
-                console.log('✅ Marker created successfully');
+                console.log('✅ Marker created successfully for account:', initAccountNumber);
             }
 
-            // Update popup
-            const accountInfo = userData.accountNumber
-                ? `<span style="color: #34C759; font-weight: 600;">Account: ${userData.accountNumber}</span><br>`
-                : '';
+            // Update popup with account number from liveLocation
+            const accountNumber = userData.liveLocation.accountNumber || userData.accountNumber || 'Not Linked';
+            const accountColor = accountNumber === 'Not Linked' ? '#FF9500' : '#34C759';
+            const accountInfo = `<div style="background: rgba(212,175,55,0.2); padding: 4px 8px; border-radius: 4px; margin: 4px 0;"><span style="color: ${accountColor}; font-weight: 700; font-size: 0.9em;">Account: ${accountNumber}</span></div>`;
 
             liveLocationMarkers[userId].setPopupContent(`
                 <div style="font-family: 'Inter'; text-align: center;">

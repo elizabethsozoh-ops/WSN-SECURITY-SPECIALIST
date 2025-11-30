@@ -882,6 +882,10 @@
                 </div>
             ` : '';
 
+            // Get account number from user data
+            const accountNumber = incident.accountNumber || incident.userProfile?.accountNumber || 'Not Linked';
+            const accountColor = accountNumber === 'Not Linked' ? '#888' : 'var(--color-success)';
+
             card.innerHTML = `
                 <div class="card-header">
                     <div class="incident-type">
@@ -891,9 +895,21 @@
                     <span class="incident-time">${timeStr}</span>
                 </div>
                 <div class="card-body">
+                    <!-- Account Number Badge -->
+                    <div style="background: rgba(212,175,55,0.1); border: 1px solid rgba(212,175,55,0.3); border-radius: 6px; padding: 8px 12px; margin-bottom: 12px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.75rem; color: var(--color-primary); font-weight: 600;">ACCOUNT #:</span>
+                            <span style="font-size: 0.875rem; color: ${accountColor}; font-weight: 700; font-family: monospace;">${accountNumber}</span>
+                        </div>
+                    </div>
+
                     <div class="info-row">
                         <span class="info-label">Client</span>
                         <span class="info-value">${incident.userProfile?.firstName || 'Unknown'} ${incident.userProfile?.lastName || ''}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Email</span>
+                        <span class="info-value" style="font-size: 0.75rem;">${incident.userEmail || 'N/A'}</span>
                     </div>
                     <div class="info-row">
                         <span class="info-label">Phone</span>

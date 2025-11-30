@@ -551,6 +551,7 @@ async function handleEmergencyButton(e) {
       priority: (emergencyType === 'panic' || emergencyType === 'medical') ? 'critical' : 'high',
       userId: currentUser.uid,
       userEmail: currentUser.email,
+      accountNumber: userData.accountNumber || 'Not Linked',
       userProfile: userData.profile || {},
       companyId: companyConfig.companyId,
       location: {
@@ -716,6 +717,7 @@ async function triggerGhostPanic() {
       priority: 'critical', // HIGHEST priority
       userId: currentUser.uid,
       userEmail: currentUser.email,
+      accountNumber: userData.accountNumber || 'Not Linked',
       userProfile: userData.profile || {},
       companyId: companyConfig.companyId,
       location: {
@@ -1010,6 +1012,7 @@ async function handleIncidentReportSubmit(e) {
       priority: 'low',
       userId: currentUser.uid,
       userEmail: currentUser.email,
+      accountNumber: userData.accountNumber || 'Not Linked',
       userProfile: userData.profile || {},
       companyId: companyConfig.companyId,
       details: details,

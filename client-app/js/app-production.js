@@ -2,7 +2,7 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 import { getFirestore, collection, addDoc, setDoc, doc, getDoc, getDocs, query, where, orderBy, onSnapshot, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
+import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
 
 // Firebase Configuration
 const firebaseConfig = {
@@ -23,6 +23,8 @@ const storage = getStorage(app);
 // App State
 let currentUser = null;
 let currentIncident = null;
+let reportUploadedFiles = []; // Files uploaded in report form
+let incidentUploadedFiles = []; // Files uploaded in incident tracking
 
 // Company Config
 const companyConfig = {
@@ -129,6 +131,7 @@ function hideError(elementId) {
 
 // Event Listeners
 function setupEventListeners() {
+  console.log('✅ Setting up event listeners...');
   // Show Register Screen
   document.getElementById('showRegisterBtn')?.addEventListener('click', () => {
     showScreen('register');
@@ -371,8 +374,10 @@ async function loadUserProfile(userId) {
 
 // Emergency Button Handler
 async function handleEmergencyButton(e) {
+  console.log('🚨 Emergency button clicked:', e);
   const button = e.currentTarget;
   const emergencyType = button.dataset.type;
+  console.log('Emergency type:', emergencyType);
 
   // Handle Incident Report separately
   if (emergencyType === 'incident-report') {
@@ -477,6 +482,7 @@ async function handleEmergencyButton(e) {
 
 // Ghost Panic Handler
 async function handleGhostPanic() {
+  console.log('👻 Ghost Panic activated!');
   // NO CONFIRMATION - Silent and immediate
   try {
     // 1. Get location silently
@@ -806,33 +812,11 @@ function showReportScreen() {
 
 let selectedFiles = [];
 
-function handleFileSelect(e) {
+async function handleFileSelect(e) {
   const files = Array.from(e.target.files);
-  const previewContainer = document.getElementById('filePreview');
-
-  files.forEach(file => {
-    selectedFiles.push(file);
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const div = document.createElement('div');
-      div.style.position = 'relative';
-      div.style.width = '80px';
-      div.style.height = '80px';
-      div.style.borderRadius = '8px';
-      div.style.overflow = 'hidden';
-      div.style.border = '1px solid #444';
-
-      if (file.type.startsWith('image/')) {
-        div.innerHTML = `<img src="${e.target.result}" style="width:100%; height:100%; object-fit:cover;">`;
-      } else {
-        div.innerHTML = `<div style="width:100%; height:100%; background:#222; display:flex; align-items:center; justify-content:center; font-size:2rem;">🎥</div>`;
-      }
-
-      previewContainer.appendChild(div);
-    };
-    reader.readAsDataURL(file);
-  });
+  if (files.length > 0) {
+    await handleReportFileSelection(files);
+  }
 }
 
 async function handleReportSubmit(e) {
@@ -852,36 +836,25 @@ async function handleReportSubmit(e) {
   try {
     showLoading();
     submitBtn.disabled = true;
-    submitBtn.textContent = 'Uploading Evidence...';
+    submitBtn.textContent = 'Submitting Report...';
 
-    // 1. Upload Files
-    const attachments = [];
-    if (selectedFiles.length > 0) {
-      for (const file of selectedFiles) {
-        const fileRef = ref(storage, `evidence/${currentUser.uid}/${Date.now()}_${file.name}`);
-        await uploadBytes(fileRef, file);
-        const url = await getDownloadURL(fileRef);
-        attachments.push({
-          name: file.name,
-          type: file.type.startsWith('image/') ? 'image' : 'video',
-          url: url,
-          size: file.size
-        });
-      }
-    }
-
-    // 2. Get Coordinates
+    // Get Coordinates
     const location = await getCurrentLocation();
 
-    // 3. Create Incident
+    // Create Incident with uploaded files
     const incident = {
-      type: 'incident_report',
-      category: category,
-      description: description,
+      type: 'incident-report',
+      reportCategory: category,
+      reportDescription: description,
       status: 'pending',
       priority: 'medium',
       userId: currentUser.uid,
       userEmail: currentUser.email,
+      userProfile: {
+        firstName: currentUser.displayName?.split(' ')[0] || '',
+        lastName: currentUser.displayName?.split(' ')[1] || '',
+        phone: currentUser.phoneNumber || ''
+      },
       companyId: companyConfig.companyId,
       location: {
         coordinates: {
@@ -889,10 +862,11 @@ async function handleReportSubmit(e) {
           lng: location.longitude,
           accuracy: location.accuracy
         },
-        address: locationText,
+        address: await getAddressFromCoordinates(location.latitude, location.longitude),
         timestamp: serverTimestamp()
       },
-      attachments: attachments,
+      reportLocation: locationText,
+      attachments: reportUploadedFiles, // Use new upload array
       timeline: [{
         timestamp: new Date(),
         action: 'report_submitted',
@@ -905,9 +879,11 @@ async function handleReportSubmit(e) {
 
     const docRef = await addDoc(collection(db, 'incidents'), incident);
 
-    // Reset form
+    // Reset form and upload state
     document.getElementById('incidentReportForm').reset();
     document.getElementById('filePreview').innerHTML = '';
+    document.getElementById('filePreview').classList.add('hidden');
+    reportUploadedFiles = []; // Reset uploaded files
     selectedFiles = [];
 
     alert('✓ Report submitted successfully');
@@ -1038,6 +1014,244 @@ function handleSafetyCheck() {
 function handleManageContacts() {
   alert('👥 Manage Contacts\n\nHere you will be able to add email/phone numbers for family members to receive alerts.\n\n(Coming in next update)');
 }
+
+// ==================== FILE UPLOAD FUNCTIONS ====================
+
+/**
+ * Handle file selection for incident report form
+ */
+async function handleReportFileSelection(files) {
+  const maxSize = 100 * 1024 * 1024; // 100MB
+  const validTypes = ['image/jpeg', 'image/png', 'image/heic', 'video/mp4', 'video/quicktime'];
+
+  for (const file of files) {
+    // Validate file size
+    if (file.size > maxSize) {
+      showMessage(`File "${file.name}" is too large. Maximum size is 100MB.`, 'error');
+      continue;
+    }
+
+    // Validate file type
+    if (!validTypes.includes(file.type)) {
+      showMessage(`File "${file.name}" is not a supported format.`, 'error');
+      continue;
+    }
+
+    try {
+      // Upload to Firebase Storage
+      const downloadURL = await uploadFileToStorage(file, 'report', null);
+
+      // Add to uploaded files array
+      reportUploadedFiles.push({
+        name: file.name,
+        url: downloadURL,
+        type: file.type.startsWith('image/') ? 'image' : 'video',
+        size: file.size,
+        uploadedAt: new Date()
+      });
+
+      // Update preview
+      displayReportFilePreview();
+
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      showMessage(`Failed to upload "${file.name}": ${error.message}`, 'error');
+    }
+  }
+}
+
+/**
+ * Handle file upload for active incident tracking screen
+ */
+async function handleIncidentFileUpload(files) {
+  if (!currentIncident) {
+    showMessage('No active incident to attach files to', 'error');
+    return;
+  }
+
+  const maxSize = 100 * 1024 * 1024; // 100MB
+  const validTypes = ['image/jpeg', 'image/png', 'image/heic', 'video/mp4', 'video/quicktime'];
+
+  for (const file of files) {
+    // Validate file size
+    if (file.size > maxSize) {
+      showMessage(`File "${file.name}" is too large. Maximum size is 100MB.`, 'error');
+      continue;
+    }
+
+    // Validate file type
+    if (!validTypes.includes(file.type)) {
+      showMessage(`File "${file.name}" is not a supported format.`, 'error');
+      continue;
+    }
+
+    try {
+      // Upload to Firebase Storage
+      const downloadURL = await uploadFileToStorage(file, 'incident', currentIncident);
+
+      // Add to uploaded files array
+      const fileData = {
+        name: file.name,
+        url: downloadURL,
+        type: file.type.startsWith('image/') ? 'image' : 'video',
+        size: file.size,
+        uploadedAt: new Date()
+      };
+
+      incidentUploadedFiles.push(fileData);
+
+      // Update Firestore with new attachment
+      const incidentRef = doc(db, 'incidents', currentIncident);
+      const incidentDoc = await getDoc(incidentRef);
+      const existingAttachments = incidentDoc.data().attachments || [];
+
+      await setDoc(incidentRef, {
+        attachments: [...existingAttachments, fileData],
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+
+      // Update preview
+      displayIncidentFilePreview();
+      showMessage(`File "${file.name}" uploaded successfully!`, 'success');
+
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      showMessage(`Failed to upload "${file.name}": ${error.message}`, 'error');
+    }
+  }
+}
+
+/**
+ * Upload file to Firebase Storage with progress tracking
+ */
+function uploadFileToStorage(file, context, incidentId) {
+  return new Promise((resolve, reject) => {
+    try {
+      // Create storage reference
+      const userId = currentUser?.uid || 'anonymous';
+      let storagePath;
+
+      if (context === 'report') {
+        storagePath = `report/${userId}/${Date.now()}_${file.name}`;
+      } else if (context === 'incident' && incidentId) {
+        storagePath = `incidents/${incidentId}/${Date.now()}_${file.name}`;
+      } else {
+        storagePath = `uploads/${userId}/${Date.now()}_${file.name}`;
+      }
+
+      const storageRef = ref(storage, storagePath);
+      const uploadTask = uploadBytesResumable(storageRef, file);
+
+      // Get progress elements
+      const progressContainer = context === 'report'
+        ? document.getElementById('reportUploadProgress')
+        : document.getElementById('incidentUploadProgress');
+      const progressBar = context === 'report'
+        ? document.getElementById('reportProgressBar')
+        : document.getElementById('incidentProgressBar');
+      const progressText = context === 'report'
+        ? document.getElementById('reportProgressText')
+        : document.getElementById('incidentProgressText');
+
+      if (progressContainer) progressContainer.classList.remove('hidden');
+
+      // Monitor upload progress
+      uploadTask.on('state_changed',
+        (snapshot) => {
+          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          if (progressBar) progressBar.style.width = progress + '%';
+          if (progressText) progressText.textContent = `Uploading ${file.name}: ${Math.round(progress)}%`;
+        },
+        (error) => {
+          console.error('Upload error:', error);
+          if (progressContainer) progressContainer.classList.add('hidden');
+          reject(error);
+        },
+        async () => {
+          // Upload completed successfully
+          try {
+            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+            if (progressContainer) progressContainer.classList.add('hidden');
+            resolve(downloadURL);
+          } catch (error) {
+            reject(error);
+          }
+        }
+      );
+
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+
+/**
+ * Display file preview for report form
+ */
+function displayReportFilePreview() {
+  const previewContainer = document.getElementById('filePreview');
+  if (!previewContainer) return;
+
+  previewContainer.innerHTML = '';
+  previewContainer.classList.remove('hidden');
+
+  reportUploadedFiles.forEach((file, index) => {
+    const fileCard = document.createElement('div');
+    fileCard.style.cssText = 'position: relative; width: 100px; height: 100px; border-radius: 8px; overflow: hidden; background: #222;';
+
+    if (file.type === 'image') {
+      fileCard.innerHTML = `
+        <img src="${file.url}" style="width: 100%; height: 100%; object-fit: cover;">
+        <button onclick="removeReportFile(${index})" style="position: absolute; top: 5px; right: 5px; background: rgba(255,59,48,0.9); color: white; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-size: 16px; line-height: 1;">×</button>
+      `;
+    } else {
+      fileCard.innerHTML = `
+        <div style="display: flex; align-items: center; justify-content: center; height: 100%; font-size: 40px;">🎥</div>
+        <button onclick="removeReportFile(${index})" style="position: absolute; top: 5px; right: 5px; background: rgba(255,59,48,0.9); color: white; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-size: 16px; line-height: 1;">×</button>
+      `;
+    }
+
+    previewContainer.appendChild(fileCard);
+  });
+}
+
+/**
+ * Display file preview for incident tracking screen
+ */
+function displayIncidentFilePreview() {
+  const previewContainer = document.getElementById('incidentFilePreview');
+  if (!previewContainer) return;
+
+  previewContainer.innerHTML = '';
+  previewContainer.classList.remove('hidden');
+
+  incidentUploadedFiles.forEach((file) => {
+    const fileCard = document.createElement('div');
+    fileCard.style.cssText = 'width: 100px; height: 100px; border-radius: 8px; overflow: hidden; background: #222;';
+
+    if (file.type === 'image') {
+      fileCard.innerHTML = `<img src="${file.url}" style="width: 100%; height: 100%; object-fit: cover;">`;
+    } else {
+      fileCard.innerHTML = `<div style="display: flex; align-items: center; justify-content: center; height: 100%; font-size: 40px;">🎥</div>`;
+    }
+
+    previewContainer.appendChild(fileCard);
+  });
+}
+
+/**
+ * Remove file from report upload array
+ */
+window.removeReportFile = function (index) {
+  reportUploadedFiles.splice(index, 1);
+  displayReportFilePreview();
+
+  if (reportUploadedFiles.length === 0) {
+    const previewContainer = document.getElementById('filePreview');
+    if (previewContainer) previewContainer.classList.add('hidden');
+  }
+};
+
 
 // Initialize app when DOM is ready
 if (document.readyState === 'loading') {

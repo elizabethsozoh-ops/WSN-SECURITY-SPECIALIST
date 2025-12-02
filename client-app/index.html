@@ -322,6 +322,17 @@
                     <p style="margin-top: 10px; color: #888;">Tap to upload photo or video</p>
                     <input type="file" id="reportFiles" class="hidden" accept="image/*,video/*" multiple>
                   </div>
+
+                  <!-- Upload Progress -->
+                  <div id="reportUploadProgress" class="hidden" style="margin-top: 10px;">
+                    <div id="reportProgressText" style="color: #888; font-size: 0.9rem; margin-bottom: 5px;">
+                      Uploading...</div>
+                    <div style="background: #222; border-radius: 10px; overflow: hidden; height: 8px;">
+                      <div id="reportProgressBar"
+                        style="background: #9B59B6; height: 100%; width: 0%; transition: width 0.3s;"></div>
+                    </div>
+                  </div>
+
                   <div id="filePreview" style="margin-top: 10px; display: flex; flex-wrap: wrap; gap: 10px;"></div>
                 </div>
 

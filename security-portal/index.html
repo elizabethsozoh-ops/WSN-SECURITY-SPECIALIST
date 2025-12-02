@@ -375,11 +375,13 @@
                         <div class="logo-main">ABC SECURITY</div>
                         <div class="logo-sub">Powered by WSN GROUP</div>
                     </div>
-                    <button id="logoutBtn" style="background: rgba(255,59,48,0.2); color: #FF3B30; border: 1px solid #FF3B30; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.875rem;">
+                    <button id="logoutBtn"
+                        style="background: rgba(255,59,48,0.2); color: #FF3B30; border: 1px solid #FF3B30; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.875rem;">
                         Logout
                     </button>
                 </div>
-                <div id="adminInfo" style="background: rgba(212,175,55,0.1); border: 1px solid rgba(212,175,55,0.3); border-radius: 6px; padding: 8px 12px; margin-bottom: 15px; display: none;">
+                <div id="adminInfo"
+                    style="background: rgba(212,175,55,0.1); border: 1px solid rgba(212,175,55,0.3); border-radius: 6px; padding: 8px 12px; margin-bottom: 15px; display: none;">
                     <div style="font-size: 0.75rem; color: var(--color-primary); font-weight: 600;">Logged in as:</div>
                     <div id="adminEmail" style="font-size: 0.875rem; color: var(--color-secondary);"></div>
                 </div>
@@ -930,6 +932,25 @@
                     ${reportDetailsHTML}
                     ${familyAlertHTML}
                     ${missedCheckInHTML}
+                                        ${incident.attachments && incident.attachments.length > 0 ? `
+                        <div style="background: rgba(212,175,55,0.1); border: 1px solid rgba(212,175,55,0.3); border-radius: 8px; padding: 12px; margin: 12px 0;">
+                            <div style="font-weight: 700; color: var(--color-primary); margin-bottom: 8px; font-size: 0.9rem;">
+                                📎 Uploaded Evidence (${incident.attachments.length} file${incident.attachments.length > 1 ? 's' : ''})
+                            </div>
+                            <div style="display: flex; flex-direction: column; gap: 8px;">
+                                ${incident.attachments.map((file, idx) => `
+                                    <div style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 6px; display: flex; align-items: center; gap: 10px;">
+                                        <span style="font-size: 1.5rem;">${file.type === 'image' ? '🖼️' : '🎥'}</span>
+                                        <div style="flex: 1;">
+                                            <div style="color: #fff; font-size: 0.85rem; font-weight: 600;">${file.name}</div>
+                                            <div style="color: #888; font-size: 0.75rem;">${(file.size / 1024 / 1024).toFixed(1)}MB</div>
+                                        </div>
+                                        <a href="${file.url}" target="_blank" style="background: var(--color-primary); color: #000; text-decoration: none; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: 600;">VIEW</a>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
                 </div>
                 <div class="card-actions" style="flex-direction: column; gap: 8px;">
                     <button class="btn btn-danger" onclick="acknowledgeIncident('${incident.id}')" style="width: 100%; background: var(--color-warning); color: #000; font-weight: 700;">

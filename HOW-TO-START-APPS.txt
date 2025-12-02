@@ -1,0 +1,88 @@
+================================================================================
+  HOW TO START YOUR ABC SECURITY APPS - SIMPLE GUIDE
+================================================================================
+
+There are 2 files you can use:
+
+--------------------------------------------------------------------------------
+1. START-APPS.bat
+   (Use this for TESTING ON YOUR PC ONLY)
+--------------------------------------------------------------------------------
+
+   How to use:
+   - Double-click "START-APPS.bat"
+   - 2 black windows will open (these are the servers - DON'T CLOSE THEM!)
+   - Your browser will open with both apps
+
+   URLs:
+   - Client App: http://localhost:8080
+   - Security Portal: http://localhost:8081
+
+
+--------------------------------------------------------------------------------
+2. START-APPS-WITH-NGROK.bat
+   (Use this for TESTING ON YOUR PHONE)
+--------------------------------------------------------------------------------
+
+   How to use:
+   - Double-click "START-APPS-WITH-NGROK.bat"
+   - 4 windows will open (DON'T CLOSE ANY OF THEM!)
+   - Look at the 2 ngrok windows
+   - Each ngrok window will show a URL like: https://xxxx-xx-xxx.ngrok-free.app
+
+   Finding the URLs:
+   - In each ngrok window, look for the line that says:
+     "Forwarding    https://xxxx.ngrok-free.app -> http://localhost:8080"
+   - Copy that https://xxxx.ngrok-free.app URL
+   - One ngrok window is for the Client App (port 8080)
+   - One ngrok window is for the Security Portal (port 8081)
+
+   On your phone:
+   - Open your phone browser
+   - Type/paste the ngrok URL
+   - Done! Your app will load
+
+   IMPORTANT:
+   - The ngrok URLs are DIFFERENT every time you restart
+   - You need to copy the new URLs each time
+   - Keep all the black windows open while testing
+
+
+--------------------------------------------------------------------------------
+HOW TO STOP THE APPS
+--------------------------------------------------------------------------------
+
+   - Just close all the black windows
+   - That's it!
+
+
+--------------------------------------------------------------------------------
+TROUBLESHOOTING
+--------------------------------------------------------------------------------
+
+   Problem: "Python is not recognized"
+   Solution: You need Python installed. It's already installed on your PC.
+
+   Problem: "ngrok is not recognized"
+   Solution: You need to install ngrok first.
+            Download from: https://ngrok.com/download
+            Or tell Claude to help you install it.
+
+   Problem: Apps won't load / stuck on loading
+   Solution: Make sure you're using the .bat files, NOT opening index.html directly!
+
+   Problem: Ngrok URLs don't work on phone
+   Solution: Make sure you copied the FULL URL including https://
+            Make sure all 4 windows are still open on your PC
+
+
+================================================================================
+QUICK SUMMARY
+================================================================================
+
+PC only:        Double-click "START-APPS.bat"
+Phone testing:  Double-click "START-APPS-WITH-NGROK.bat" then copy URLs
+
+That's it!
+
+================================================================================

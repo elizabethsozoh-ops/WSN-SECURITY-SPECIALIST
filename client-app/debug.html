@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Firebase Debug</title>
+    <style>
+        body {
+            background: #1a1a1a;
+            color: #fff;
+            font-family: monospace;
+            padding: 20px;
+        }
+        .log {
+            background: #2a2a2a;
+            padding: 10px;
+            margin: 5px 0;
+            border-left: 3px solid #D4AF37;
+        }
+        .error { border-left-color: #ff0000; }
+        .success { border-left-color: #00ff00; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Firebase Connection Debug</h1>
+    <div id="logs"></div>
+
+    <script type="module">
+        const logsDiv = document.getElementById('logs');
+
+        function log(message, type = 'log') {
+            console.log(message);
+            const div = document.createElement('div');
+            div.className = 'log ' + type;
+            div.textContent = new Date().toLocaleTimeString() + ' - ' + message;
+            logsDiv.appendChild(div);
+        }
+
+        log('Starting Firebase test...');
+
+        try {
+            log('Importing Firebase modules...');
+            const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
+            const { getAuth, onAuthStateChanged } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
+            const { getFirestore } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+
+            log('✓ Firebase modules loaded', 'success');
+
+            const firebaseConfig = {
+                apiKey: "AIzaSyCqIFBd6sq46cjCCjJ2L5QXVaEsvbuGKi8",
+                authDomain: "wsn-guardian.firebaseapp.com",
+                projectId: "wsn-guardian",
+                storageBucket: "wsn-guardian.firebasestorage.app",
+                messagingSenderId: "867816848580",
+                appId: "1:867816848580:web:a356aa5d456d287feb9d91"
+            };
+
+            log('Initializing Firebase app...');
+            const app = initializeApp(firebaseConfig);
+            log('✓ Firebase app initialized', 'success');
+
+            log('Getting Auth instance...');
+            const auth = getAuth(app);
+            log('✓ Auth instance created', 'success');
+
+            log('Getting Firestore instance...');
+            const db = getFirestore(app);
+            log('✓ Firestore instance created', 'success');
+
+            log('Setting up auth state listener...');
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    log('✓ User is signed in: ' + user.email, 'success');
+                } else {
+                    log('ℹ No user signed in (this is normal)', 'success');
+                }
+            });
+
+            log('✓ All Firebase services initialized successfully!', 'success');
+            log('The main app should work. Check the main console for errors.');
+
+        } catch (error) {
+            log('❌ ERROR: ' + error.message, 'error');
+            log('Full error: ' + JSON.stringify(error), 'error');
+        }
+    </script>
+</body>
+</html>

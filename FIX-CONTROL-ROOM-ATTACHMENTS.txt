@@ -1,0 +1,24 @@
+// CONTROL ROOM ATTACHMENTS DISPLAY FIX
+// Instructions: Open security-portal/index.html
+// Find line 932 which has: ${missedCheckInHTML}
+// Add this code AFTER line 932 (before the </div> on line 933):
+
+                    ${incident.attachments && incident.attachments.length > 0 ? `
+                        <div style="background: rgba(212,175,55,0.1); border: 1px solid rgba(212,175,55,0.3); border-radius: 8px; padding: 12px; margin: 12px 0;">
+                            <div style="font-weight: 700; color: var(--color-primary); margin-bottom: 8px; font-size: 0.9rem;">
+                                📎 Uploaded Evidence (${incident.attachments.length} file${incident.attachments.length > 1 ? 's' : ''})
+                            </div>
+                            <div style="display: flex; flex-direction: column; gap: 8px;">
+                                ${incident.attachments.map((file, idx) => `
+                                    <div style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 6px; display: flex; align-items: center; gap: 10px;">
+                                        <span style="font-size: 1.5rem;">${file.type === 'image' ? '🖼️' : '🎥'}</span>
+                                        <div style="flex: 1;">
+                                            <div style="color: #fff; font-size: 0.85rem; font-weight: 600;">${file.name}</div>
+                                            <div style="color: #888; font-size: 0.75rem;">${(file.size / 1024 / 1024).toFixed(1)}MB</div>
+                                        </div>
+                                        <a href="${file.url}" target="_blank" style="background: var(--color-primary); color: #000; text-decoration: none; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: 600;">VIEW</a>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}

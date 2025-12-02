@@ -26,7 +26,7 @@ let currentIncident = null;
 const companyConfig = {
   companyId: "wsn-group",
   displayName: "abc security",
-  tagline: "Powered by WSN GROUP",
+  tagline: "Powered by WSN Security Specialist",
   colors: {
     primary: "#D4AF37",
     secondary: "#C0C0C0"
@@ -48,7 +48,6 @@ function initApp() {
 
   // Setup auth state listener
   onAuthStateChanged(auth, (user) => {
-    console.log('🔐 Auth state changed:', user ? 'User logged in' : 'No user');
     if (user) {
       currentUser = user;
       loadUserProfile(user.uid);
@@ -58,15 +57,6 @@ function initApp() {
       hideLoading();
     }
   });
-
-  // Fallback: Hide loading after 3 seconds if still showing
-  setTimeout(() => {
-    if (!document.getElementById('loadingScreen')?.classList.contains('hidden')) {
-      console.warn('⚠️ Loading timeout - forcing hide');
-      hideLoading();
-      showScreen('login');
-    }
-  }, 3000);
 
   // Setup event listeners
   setupEventListeners();
@@ -93,7 +83,7 @@ function applyBranding() {
 
 // Screen Management
 function showScreen(screenName) {
-  const screens = ['loginScreen', 'registerScreen', 'dashboardScreen', 'incidentScreen', 'incidentReportScreen', 'incidentReportDetailsScreen', 'incidentHistoryScreen', 'emergencyContactsScreen', 'safetyCheckInScreen', 'liveLocationScreen'];
+  const screens = ['loginScreen', 'registerScreen', 'dashboardScreen', 'incidentScreen'];
   screens.forEach(screen => {
     document.getElementById(screen)?.classList.add('hidden');
   });
@@ -158,28 +148,19 @@ function setupEventListeners() {
     btn.addEventListener('click', handleEmergencyButton);
   });
 
+  // Ghost Panic Button
+  document.getElementById('ghostPanicBtn')?.addEventListener('click', handleGhostPanic);
+
   // Logout button
   document.getElementById('logoutBtn')?.addEventListener('click', handleLogout);
 
   // Quick Actions
   document.getElementById('viewHistoryBtn')?.addEventListener('click', () => {
-    showScreen('incidentHistoryScreen');
-    loadIncidentHistory();
-  });
-
-  document.getElementById('backFromHistoryBtn')?.addEventListener('click', () => {
-    showScreen('dashboardScreen');
+    alert('📜 Incident History\n\nThis feature is coming soon!');
   });
 
   document.getElementById('manageDependantsBtn')?.addEventListener('click', () => {
     alert('👥 Manage Dependants\n\nThis feature is coming soon!');
-  });
-
-  // 👻 GHOST PANIC Button - Revolutionary invisible panic feature
-  document.getElementById('silentAlarmBtn')?.addEventListener('click', () => {
-    // NO confirmation dialog - instant activation
-    // This is critical for real danger situations
-    triggerGhostPanic();
   });
 
   document.getElementById('callControlBtn')?.addEventListener('click', () => {
@@ -199,73 +180,6 @@ function setupEventListeners() {
   document.getElementById('callUnitBtn')?.addEventListener('click', () => {
     alert('📞 Calling responding unit...');
   });
-
-  // Incident Report Button
-  document.getElementById('incidentReportBtn')?.addEventListener('click', () => {
-    showScreen('incidentReport');
-  });
-
-  // Incident Report Category Selection
-  document.querySelectorAll('.category-btn').forEach(btn => {
-    btn.addEventListener('click', handleCategorySelection);
-  });
-
-  // Incident Report Form
-  document.getElementById('incidentReportForm')?.addEventListener('submit', handleIncidentReportSubmit);
-
-  // Back buttons for report screens
-  document.getElementById('backFromReportBtn')?.addEventListener('click', () => {
-    showScreen('dashboard');
-  });
-
-  document.getElementById('backToReportCategoriesBtn')?.addEventListener('click', () => {
-    showScreen('incidentReport');
-  });
-
-  // Voice Input Button
-  document.getElementById('voiceInputBtn')?.addEventListener('click', handleVoiceInput);
-
-  // Emergency Contacts
-  document.getElementById('emergencyContactsBtn')?.addEventListener('click', () => {
-    showScreen('emergencyContacts');
-    loadEmergencyContacts();
-  });
-
-  document.getElementById('backFromContactsBtn')?.addEventListener('click', () => {
-    showScreen('dashboard');
-  });
-
-  document.getElementById('addContactForm')?.addEventListener('submit', handleAddContact);
-
-  // Safety Check-In
-  document.getElementById('safetyCheckInBtn')?.addEventListener('click', () => {
-    showScreen('safetyCheckIn');
-    loadCheckInStatus();
-  });
-
-  document.getElementById('backFromCheckInBtn')?.addEventListener('click', () => {
-    showScreen('dashboard');
-  });
-
-  document.getElementById('toggleCheckInBtn')?.addEventListener('click', toggleCheckIn);
-
-  // Live Location Sharing
-  document.getElementById('shareLiveLocationBtn')?.addEventListener('click', () => {
-    showScreen('liveLocation');
-    loadLocationStatus();
-  });
-
-  document.getElementById('backFromLocationBtn')?.addEventListener('click', () => {
-    showScreen('dashboard');
-  });
-
-  document.getElementById('toggleLocationBtn')?.addEventListener('click', toggleLiveLocation);
-
-  // Alert My Family Button (from dashboard)
-  document.getElementById('notifyFamilyBtn')?.addEventListener('click', alertMyFamily);
-
-  // Link Account Button
-  document.getElementById('linkAccountBtn')?.addEventListener('click', linkAccount);
 }
 
 // Authentication Handlers
@@ -394,50 +308,10 @@ async function loadUserProfile(userId) {
       const userData = userDoc.data();
       const profile = userData.profile || {};
 
-      // Auto-assign mock account numbers and roles for test users
-      const mockAccounts = {
-        'skylupa@gmail.com': 'ABC-10001',
-        'elizabeth@example.com': 'ABC-10002'
-      };
-
-      const adminUsers = ['controller@abcsecurity.com', 'admin@abcsecurity.com'];
-
-      // Auto-assign account number
-      if (!userData.accountNumber && mockAccounts[currentUser.email]) {
-        console.log('🔗 Auto-assigning account number for test user:', currentUser.email);
-        await setDoc(userDocRef, {
-          accountNumber: mockAccounts[currentUser.email],
-          accountLinkedAt: serverTimestamp()
-        }, { merge: true });
-        userData.accountNumber = mockAccounts[currentUser.email];
-      }
-
-      // Auto-assign admin role
-      if (!userData.role && adminUsers.includes(currentUser.email)) {
-        console.log('👑 Auto-assigning admin role to:', currentUser.email);
-        await setDoc(userDocRef, {
-          role: 'admin',
-          roleAssignedAt: serverTimestamp()
-        }, { merge: true });
-        userData.role = 'admin';
-      }
-
       // Update welcome message
       const welcomeMessage = document.getElementById('welcomeMessage');
       if (welcomeMessage) {
         welcomeMessage.textContent = `Welcome, ${profile.firstName || currentUser.email.split('@')[0]}`;
-      }
-
-      // Update account number display
-      const accountNumberEl = document.getElementById('accountNumber');
-      if (accountNumberEl) {
-        if (userData.accountNumber) {
-          accountNumberEl.textContent = userData.accountNumber;
-          accountNumberEl.style.color = 'var(--color-success)';
-        } else {
-          accountNumberEl.textContent = 'Not Linked';
-          accountNumberEl.style.color = '#888';
-        }
       }
 
       // Update last login
@@ -551,7 +425,6 @@ async function handleEmergencyButton(e) {
       priority: (emergencyType === 'panic' || emergencyType === 'medical') ? 'critical' : 'high',
       userId: currentUser.uid,
       userEmail: currentUser.email,
-      accountNumber: userData.accountNumber || 'Not Linked',
       userProfile: userData.profile || {},
       companyId: companyConfig.companyId,
       location: {
@@ -583,6 +456,60 @@ async function handleEmergencyButton(e) {
     hideLoading();
     console.error('Error creating incident:', error);
     alert(`⚠️ Error creating emergency alert.\n\nDetails: ${error.message}\n\nPlease call the control room directly:\n${companyConfig.contact.phone}`);
+  }
+}
+
+// Ghost Panic Handler
+async function handleGhostPanic() {
+  // NO CONFIRMATION - Silent and immediate
+  try {
+    // 1. Get location silently
+    const location = await getCurrentLocation();
+
+    // 2. Create silent incident
+    const incident = {
+      type: 'ghost-panic', // Special type for control room
+      status: 'pending',
+      priority: 'critical',
+      userId: currentUser.uid,
+      userEmail: currentUser.email,
+      companyId: companyConfig.companyId,
+      location: {
+        coordinates: {
+          lat: location.latitude,
+          lng: location.longitude,
+          accuracy: location.accuracy
+        },
+        // Don't wait for address reverse geocoding to be faster
+        address: `GPS: ${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`,
+        timestamp: serverTimestamp()
+      },
+      timeline: [{
+        timestamp: new Date(),
+        action: 'ghost_panic_activated',
+        actor: 'client',
+        note: 'GHOST PANIC ACTIVATED - SILENT ALARM'
+      }],
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    };
+
+    // 3. Send to Firebase
+    await addDoc(collection(db, 'incidents'), incident);
+
+    // 4. "Close" the app immediately
+    // We can't actually close the browser tab via JS usually, so we simulate it
+    // by replacing the body with a generic error or blank page to look like a crash/exit
+    document.body.innerHTML = '';
+    document.body.style.background = '#000';
+
+    // Optional: Redirect to Google or generic page
+    window.location.href = 'https://www.google.com';
+
+  } catch (error) {
+    console.error('Ghost panic error:', error);
+    // Even if error, try to close/hide app
+    window.location.href = 'https://www.google.com';
   }
 }
 
@@ -674,96 +601,6 @@ function updateIncidentScreen(incident) {
       // Scroll to bottom
       timelineContainer.scrollTop = timelineContainer.scrollHeight;
     }
-  }
-}
-
-// 🔕 GHOST PANIC - Revolutionary Invisible Panic Feature
-// Sends alert to control room but COMPLETELY closes app (returns to home screen)
-// NO visual feedback on phone - appears as if user just closed the app
-// CRITICAL for situations where attacker is watching the phone
-async function triggerGhostPanic() {
-  try {
-    console.log('👻 GHOST PANIC ACTIVATED');
-
-    // Get current location silently (no UI updates)
-    let location;
-    try {
-      location = await getCurrentLocation();
-    } catch (error) {
-      console.error('Ghost Panic: Location error (continuing anyway):', error);
-      location = { latitude: 0, longitude: 0, accuracy: 0 };
-    }
-
-    // Get address from GPS silently
-    let addressFromGPS = 'Location unavailable';
-    if (location.latitude !== 0 && location.longitude !== 0) {
-      try {
-        addressFromGPS = await reverseGeocodeLocation(location.latitude, location.longitude);
-      } catch (error) {
-        console.error('Ghost Panic: Geocoding error (continuing anyway):', error);
-        addressFromGPS = `GPS: ${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`;
-      }
-    }
-
-    // Get user data silently
-    const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
-    const userData = userDoc.exists() ? userDoc.data() : {};
-
-    // Create GHOST PANIC incident in Firebase
-    const incident = {
-      type: 'ghost-panic',
-      ghostMode: true, // Special flag for control room to know this is ghost panic
-      status: 'pending',
-      priority: 'critical', // HIGHEST priority
-      userId: currentUser.uid,
-      userEmail: currentUser.email,
-      accountNumber: userData.accountNumber || 'Not Linked',
-      userProfile: userData.profile || {},
-      companyId: companyConfig.companyId,
-      location: {
-        coordinates: {
-          lat: location.latitude,
-          lng: location.longitude,
-          accuracy: location.accuracy
-        },
-        address: addressFromGPS,
-        timestamp: serverTimestamp()
-      },
-      timeline: [{
-        timestamp: new Date(),
-        action: 'ghost_panic_activated',
-        actor: 'client',
-        note: '👻 GHOST PANIC - Client activated invisible panic (app closed on their device)'
-      }],
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    };
-
-    // Send to Firebase (fire and forget - don't wait for response)
-    addDoc(collection(db, 'incidents'), incident).catch(err => {
-      console.error('Ghost Panic: Firebase error:', err);
-    });
-
-    // IMMEDIATELY close app and return to home screen
-    // Multiple methods to ensure it works across different browsers/devices
-
-    // Method 1: Close current window (works in PWA)
-    if (window.opener) {
-      window.close();
-    }
-
-    // Method 2: Navigate away from app (works on iOS Safari)
-    window.location.href = 'about:blank';
-
-    // Method 3: Go back to previous page (fallback)
-    setTimeout(() => {
-      window.history.back();
-    }, 100);
-
-  } catch (error) {
-    console.error('Ghost Panic: Critical error:', error);
-    // Even if there's an error, still try to close the app
-    window.location.href = 'about:blank';
   }
 }
 
@@ -917,313 +754,6 @@ async function reverseGeocodeLocation(lat, lng) {
   }
 }
 
-// Incident Report Handlers
-let selectedCategory = null;
-
-const categoryLabels = {
-  'suspicious-behaviour': 'Suspicious Behaviour',
-  'noise-complaint': 'Noise Complaint',
-  'vandalism': 'Vandalism / Property Damage',
-  'trespassing': 'Trespassing',
-  'lost-found': 'Lost & Found',
-  'traffic-incident': 'Traffic Incident',
-  'other': 'Other'
-};
-
-function handleCategorySelection(e) {
-  const button = e.currentTarget;
-  selectedCategory = button.dataset.category;
-
-  // Update the category display
-  const categoryDisplay = document.getElementById('reportCategory');
-  if (categoryDisplay) {
-    categoryDisplay.textContent = categoryLabels[selectedCategory];
-  }
-
-  // Clear the form
-  document.getElementById('reportDetails').value = '';
-  document.getElementById('reportLocation').value = '';
-  hideError('reportError');
-
-  // Show the details screen
-  showScreen('incidentReportDetails');
-}
-
-async function handleIncidentReportSubmit(e) {
-  e.preventDefault();
-  hideError('reportError');
-
-  const details = document.getElementById('reportDetails').value;
-  const location = document.getElementById('reportLocation').value;
-
-  if (!selectedCategory) {
-    showError('reportError', 'Please select a category');
-    return;
-  }
-
-  if (!details.trim()) {
-    showError('reportError', 'Please describe what you observed');
-    return;
-  }
-
-  try {
-    showLoading();
-
-    // Get current GPS location
-    const gpsLocation = await getCurrentLocation();
-    const addressFromGPS = await reverseGeocodeLocation(gpsLocation.latitude, gpsLocation.longitude);
-
-    // Get user data
-    let userData = { profile: {} };
-
-    if (!currentUser.uid.startsWith('demo-user-')) {
-      let userDocRef = doc(db, 'users', currentUser.uid);
-      let userDoc = await getDoc(userDocRef);
-
-      if (!userDoc.exists()) {
-        const q = query(collection(db, 'users'), where('userId', '==', currentUser.uid));
-        const querySnapshot = await getDocs(q);
-        if (!querySnapshot.empty) {
-          userDoc = querySnapshot.docs[0];
-        }
-      }
-
-      if (userDoc.exists()) {
-        userData = userDoc.data();
-      }
-    } else {
-      userData.profile = {
-        firstName: 'Demo',
-        lastName: 'User',
-        phone: '000-000-0000',
-        address: 'Demo Address'
-      };
-    }
-
-    // Create incident report
-    const report = {
-      type: 'incident-report',
-      category: selectedCategory,
-      categoryLabel: categoryLabels[selectedCategory],
-      reportCategory: categoryLabels[selectedCategory], // For control room display
-      reportDescription: details, // For control room display
-      reportLocation: location || '', // Specific location if provided
-      status: 'pending',
-      priority: 'low',
-      userId: currentUser.uid,
-      userEmail: currentUser.email,
-      accountNumber: userData.accountNumber || 'Not Linked',
-      userProfile: userData.profile || {},
-      companyId: companyConfig.companyId,
-      details: details,
-      location: {
-        coordinates: {
-          lat: gpsLocation.latitude,
-          lng: gpsLocation.longitude,
-          accuracy: gpsLocation.accuracy
-        },
-        address: addressFromGPS, // GPS-based address
-        timestamp: serverTimestamp()
-      },
-      timeline: [{
-        timestamp: new Date(),
-        action: 'report_created',
-        actor: 'client',
-        note: `Incident report submitted: ${categoryLabels[selectedCategory]}`
-      }],
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    };
-
-    await addDoc(collection(db, 'incidents'), report);
-
-    hideLoading();
-    alert('✓ Report Submitted\n\nYour incident report has been received by the control room. You will be contacted if additional information is needed.');
-
-    // Reset and go back to dashboard
-    selectedCategory = null;
-    document.getElementById('reportDetails').value = '';
-    document.getElementById('reportLocation').value = '';
-    showScreen('dashboard');
-
-  } catch (error) {
-    hideLoading();
-    console.error('Error submitting report:', error);
-    showError('reportError', 'Error submitting report. Please try again.');
-  }
-}
-
-// Voice Input Handler
-function handleVoiceInput() {
-  const textarea = document.getElementById('reportDetails');
-  const statusEl = document.getElementById('voiceStatus');
-  const btn = document.getElementById('voiceInputBtn');
-
-  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-    alert('Voice input is not supported in your browser. Please use Chrome, Edge, or Safari.');
-    return;
-  }
-
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  const recognition = new SpeechRecognition();
-
-  recognition.lang = 'en-US';
-  recognition.continuous = false;
-  recognition.interimResults = false;
-
-  statusEl.textContent = '🎤 Listening... Speak now';
-  statusEl.style.display = 'block';
-  btn.disabled = true;
-  btn.textContent = '🎤 Listening...';
-
-  recognition.onresult = (event) => {
-    const transcript = event.results[0][0].transcript;
-    textarea.value = transcript;
-    statusEl.textContent = '✓ Voice input complete';
-    statusEl.style.color = '#34C759';
-  };
-
-  recognition.onerror = (event) => {
-    console.error('Speech recognition error:', event.error);
-    statusEl.textContent = '✗ Error: ' + event.error;
-    statusEl.style.color = '#FF3B30';
-  };
-
-  recognition.onend = () => {
-    btn.disabled = false;
-    btn.textContent = '🎤 Use Voice Input';
-    setTimeout(() => {
-      statusEl.style.display = 'none';
-    }, 3000);
-  };
-
-  recognition.start();
-}
-
-// Incident History Functions
-async function loadIncidentHistory() {
-  const container = document.getElementById('historyContainer');
-  const loadingEl = document.getElementById('historyLoading');
-  const noHistoryEl = document.getElementById('noHistoryMessage');
-
-  // Show loading
-  container.innerHTML = '';
-  loadingEl.classList.remove('hidden');
-  noHistoryEl.classList.add('hidden');
-
-  try {
-    // Query user's incidents ordered by creation date (newest first)
-    const q = query(
-      collection(db, 'incidents'),
-      where('userId', '==', currentUser.uid),
-      orderBy('createdAt', 'desc')
-    );
-
-    const querySnapshot = await getDocs(q);
-
-    // Hide loading
-    loadingEl.classList.add('hidden');
-
-    if (querySnapshot.empty) {
-      noHistoryEl.classList.remove('hidden');
-      return;
-    }
-
-    // Render incidents
-    querySnapshot.forEach((doc) => {
-      const incident = { id: doc.id, ...doc.data() };
-      const incidentCard = createHistoryCard(incident);
-      container.appendChild(incidentCard);
-    });
-
-  } catch (error) {
-    console.error('Error loading incident history:', error);
-    loadingEl.classList.add('hidden');
-    container.innerHTML = `
-      <div class="card card-metallic" style="text-align: center; padding: 2rem; color: var(--color-danger);">
-        <h3>Error Loading History</h3>
-        <p>${error.message}</p>
-        <button class="btn btn-secondary" onclick="loadIncidentHistory()" style="margin-top: 1rem;">
-          Try Again
-        </button>
-      </div>
-    `;
-  }
-}
-
-function createHistoryCard(incident) {
-  const card = document.createElement('div');
-  card.className = 'card card-metallic';
-  card.style.marginBottom = '1rem';
-
-  // Type labels and colors
-  const typeConfig = {
-    'panic': { label: '🚨 PANIC!!!!', color: '#FF3B30' },
-    'ghost-panic': { label: '⚠️ GHOST ALARM', color: '#8B0000' },
-    'medical': { label: '🏥 MEDICAL ASSISTANCE', color: '#007AFF' },
-    'fire': { label: '🔥 FIRE & RESCUE', color: '#FF9500' },
-    'technical': { label: '🔧 TECHNICAL DEPARTMENT', color: '#888' },
-    'incident-report': { label: '📋 INCIDENT REPORT', color: '#9B59B6' }
-  };
-
-  const config = typeConfig[incident.type] || { label: incident.type, color: '#666' };
-
-  // Status badges
-  const statusConfig = {
-    'pending': { label: '⏳ Pending', color: '#FF9500' },
-    'dispatched': { label: '🚔 Dispatched', color: '#007AFF' },
-    'resolved': { label: '✓ Resolved', color: '#34C759' },
-    'cancelled': { label: '✕ Cancelled', color: '#888' }
-  };
-
-  const status = statusConfig[incident.status] || { label: incident.status, color: '#666' };
-
-  // Format timestamp
-  const timestamp = incident.createdAt?.toDate ? incident.createdAt.toDate() : new Date();
-  const timeStr = timestamp.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) + ' at ' + timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-  // Build report details if it's an incident report
-  const reportDetails = incident.type === 'incident-report' ? `
-    <div style="background: rgba(155,89,182,0.1); border: 1px solid rgba(155,89,182,0.3); border-radius: 8px; padding: 10px; margin-top: 10px;">
-      <div style="font-weight: 600; color: #9B59B6; font-size: 0.85rem;">
-        ${incident.reportCategory || incident.categoryLabel || 'Unknown Category'}
-      </div>
-      <div style="color: var(--color-silver); font-size: 0.8rem; margin-top: 5px;">
-        ${incident.reportDescription || incident.details || 'No description'}
-      </div>
-    </div>
-  ` : '';
-
-  card.innerHTML = `
-    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
-      <div>
-        <div style="font-weight: 700; color: ${config.color}; font-size: 0.95rem;">
-          ${config.label}
-        </div>
-        <div style="color: var(--color-silver); font-size: 0.75rem; margin-top: 4px;">
-          ${timeStr}
-        </div>
-      </div>
-      <div style="background: ${status.color}; color: #000; padding: 4px 12px; border-radius: 12px; font-size: 0.75rem; font-weight: 600;">
-        ${status.label}
-      </div>
-    </div>
-
-    ${reportDetails}
-
-    <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1);">
-      <div style="color: var(--color-silver); font-size: 0.8rem;">
-        <strong>Location:</strong> ${incident.location?.address || 'No address'}
-      </div>
-      <div style="color: var(--color-silver); font-size: 0.75rem; margin-top: 4px;">
-        ID: ${incident.id.substr(0, 8).toUpperCase()}
-      </div>
-    </div>
-  `;
-
-  return card;
-}
-
 // Error Messages
 function getErrorMessage(errorCode) {
   const errorMessages = {
@@ -1238,539 +768,6 @@ function getErrorMessage(errorCode) {
   };
 
   return errorMessages[errorCode] || 'An error occurred. Please try again.';
-}
-
-// Make loadIncidentHistory available globally for inline onclick
-window.loadIncidentHistory = loadIncidentHistory;
-
-// ==================== EMERGENCY CONTACTS ====================
-let emergencyContacts = [];
-
-async function loadEmergencyContacts() {
-  try {
-    const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
-    if (userDoc.exists()) {
-      emergencyContacts = userDoc.data().emergencyContacts || [];
-      displayEmergencyContacts();
-    }
-  } catch (error) {
-    console.error('Error loading emergency contacts:', error);
-  }
-}
-
-function displayEmergencyContacts() {
-  const container = document.getElementById('contactsList');
-  const noContactsMsg = document.getElementById('noContactsMessage');
-
-  if (emergencyContacts.length === 0) {
-    container.innerHTML = '';
-    noContactsMsg.classList.remove('hidden');
-    return;
-  }
-
-  noContactsMsg.classList.add('hidden');
-  container.innerHTML = emergencyContacts.map((contact, index) => `
-    <div class="card card-metallic" style="margin-bottom: 1rem;">
-      <div style="display: flex; justify-content: space-between; align-items: start;">
-        <div style="flex: 1;">
-          <h4 style="color: var(--color-bronze); margin: 0 0 0.5rem 0;">${contact.name}</h4>
-          <p style="color: var(--color-silver); font-size: 0.875rem; margin: 0.25rem 0;">📱 ${contact.phone}</p>
-          <p style="color: var(--color-silver); font-size: 0.875rem; margin: 0.25rem 0;">👤 ${contact.relationship}</p>
-        </div>
-        <button onclick="deleteContact(${index})" class="btn btn-danger" style="padding: 0.5rem 1rem;">
-          🗑️ Delete
-        </button>
-      </div>
-    </div>
-  `).join('');
-}
-
-async function handleAddContact(e) {
-  e.preventDefault();
-
-  const name = document.getElementById('contactName').value;
-  const phone = document.getElementById('contactPhone').value;
-  const relationship = document.getElementById('contactRelationship').value;
-
-  const newContact = { name, phone, relationship };
-  emergencyContacts.push(newContact);
-
-  try {
-    await setDoc(doc(db, 'users', currentUser.uid), {
-      emergencyContacts: emergencyContacts
-    }, { merge: true });
-
-    document.getElementById('addContactForm').reset();
-    displayEmergencyContacts();
-    alert(`✓ Contact Added\n\n${name} will be notified during emergencies.`);
-  } catch (error) {
-    console.error('Error adding contact:', error);
-    emergencyContacts.pop();
-    alert('Error adding contact. Please try again.');
-  }
-}
-
-window.deleteContact = async function(index) {
-  if (!confirm(`Delete ${emergencyContacts[index].name}?`)) return;
-
-  emergencyContacts.splice(index, 1);
-
-  try {
-    await setDoc(doc(db, 'users', currentUser.uid), {
-      emergencyContacts: emergencyContacts
-    }, { merge: true });
-
-    displayEmergencyContacts();
-    alert('✓ Contact deleted');
-  } catch (error) {
-    console.error('Error deleting contact:', error);
-    alert('Error deleting contact. Please try again.');
-  }
-};
-
-// ==================== ALERT MY FAMILY ====================
-async function alertMyFamily() {
-  try {
-    // Load emergency contacts first
-    const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
-    const contacts = userDoc.exists() ? (userDoc.data().emergencyContacts || []) : [];
-
-    if (contacts.length === 0) {
-      if (confirm('No emergency contacts found.\n\nWould you like to add some now?')) {
-        showScreen('emergencyContacts');
-        loadEmergencyContacts();
-      }
-      return;
-    }
-
-    if (!confirm(`⚠️ ALERT MY FAMILY\n\nThis will send SMS alerts to ${contacts.length} emergency contact(s):\n${contacts.map(c => `• ${c.name}`).join('\n')}\n\nContinue?`)) {
-      return;
-    }
-
-    showLoading();
-
-    // Get current location
-    const location = await getCurrentLocation();
-    const address = await reverseGeocodeLocation(location.latitude, location.longitude);
-
-    // Create family alert incident
-    const familyAlert = {
-      type: 'family-alert',
-      status: 'pending',
-      priority: 'high',
-      userId: currentUser.uid,
-      userEmail: currentUser.email,
-      emergencyContacts: contacts,
-      location: {
-        coordinates: {
-          lat: location.latitude,
-          lng: location.longitude,
-          accuracy: location.accuracy
-        },
-        address: address,
-        timestamp: serverTimestamp()
-      },
-      message: `EMERGENCY ALERT: ${currentUser.email} has activated Family Alert`,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    };
-
-    await addDoc(collection(db, 'familyAlerts'), familyAlert);
-
-    hideLoading();
-    alert(`✓ Family Alert Sent!\n\nYour emergency contacts have been notified:\n${contacts.map(c => `• ${c.name} (${c.phone})`).join('\n')}\n\nControl Room has also been alerted.`);
-
-  } catch (error) {
-    hideLoading();
-    console.error('Error sending family alert:', error);
-    alert('Error sending family alert. Please call your contacts manually.');
-  }
-}
-
-// ==================== LIVE LOCATION SHARING ====================
-let locationSharingActive = false;
-let locationInterval = null;
-
-async function loadLocationStatus() {
-  const statusEl = document.getElementById('locationStatus');
-  const iconEl = document.getElementById('locationIcon');
-  const btn = document.getElementById('toggleLocationBtn');
-
-  if (locationSharingActive) {
-    statusEl.textContent = '🟢 Sharing location every 30 seconds';
-    statusEl.style.color = '#34C759';
-    iconEl.textContent = '📍✅';
-    btn.textContent = '🛑 STOP SHARING';
-    btn.style.background = '#FF3B30';
-    btn.style.color = '#fff';
-    btn.style.fontWeight = '700';
-    updateCurrentLocationDisplay();
-  } else {
-    statusEl.textContent = 'Not active';
-    statusEl.style.color = '#888';
-    iconEl.textContent = '📍';
-    btn.textContent = '📍 START SHARING LOCATION';
-    btn.style.background = '#D4AF37';
-    btn.style.color = '#000';
-    btn.style.fontWeight = '700';
-  }
-}
-
-async function toggleLiveLocation() {
-  if (locationSharingActive) {
-    // Stop sharing
-    locationSharingActive = false;
-    if (locationInterval) {
-      clearInterval(locationInterval);
-      locationInterval = null;
-    }
-
-    // Update Firebase
-    try {
-      await setDoc(doc(db, 'users', currentUser.uid), {
-        liveLocation: {
-          active: false,
-          stoppedAt: serverTimestamp()
-        }
-      }, { merge: true });
-    } catch (error) {
-      console.error('Error stopping location sharing:', error);
-    }
-
-    alert('✓ Location sharing stopped');
-    loadLocationStatus();
-  } else {
-    // Start sharing
-    if (!confirm('📍 Share Live Location\n\nControl Room will see your real-time GPS position every 30 seconds.\n\nThis is useful when:\n• Walking alone at night\n• Entering unfamiliar areas\n• During emergencies\n\nContinue?')) {
-      return;
-    }
-
-    locationSharingActive = true;
-    shareLocationNow(); // Share immediately
-
-    // Then share every 30 seconds
-    locationInterval = setInterval(shareLocationNow, 30000);
-
-    alert('✓ Location sharing started\n\nControl Room can now track your movement in real-time.');
-    loadLocationStatus();
-  }
-}
-
-async function shareLocationNow() {
-  try {
-    const location = await getCurrentLocation();
-    const address = await reverseGeocodeLocation(location.latitude, location.longitude);
-
-    // Get user data to include account number
-    const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
-    const userData = userDoc.data() || {};
-    const accountNumber = userData.accountNumber || 'Not Linked';
-
-    console.log('📍 Sharing location with account:', accountNumber);
-
-    await setDoc(doc(db, 'users', currentUser.uid), {
-      liveLocation: {
-        active: true,
-        userEmail: currentUser.email,
-        accountNumber: accountNumber,
-        coordinates: {
-          lat: location.latitude,
-          lng: location.longitude,
-          accuracy: location.accuracy
-        },
-        address: address,
-        timestamp: serverTimestamp()
-      }
-    }, { merge: true });
-
-    // Also add to location trail
-    await addDoc(collection(db, 'locationTrail'), {
-      userId: currentUser.uid,
-      userEmail: currentUser.email,
-      accountNumber: accountNumber,
-      coordinates: {
-        lat: location.latitude,
-        lng: location.longitude,
-        accuracy: location.accuracy
-      },
-      address: address,
-      timestamp: serverTimestamp()
-    });
-
-    updateCurrentLocationDisplay();
-    console.log('✓ Location shared:', address, '| Account:', accountNumber);
-  } catch (error) {
-    console.error('Error sharing location:', error);
-  }
-}
-
-async function updateCurrentLocationDisplay() {
-  const container = document.getElementById('currentLocationInfo');
-  try {
-    const location = await getCurrentLocation();
-    const address = await reverseGeocodeLocation(location.latitude, location.longitude);
-
-    container.innerHTML = `
-      <div style="color: var(--color-silver); font-size: 0.875rem; line-height: 1.6;">
-        <p style="margin: 0.5rem 0;"><strong style="color: var(--color-bronze);">📍 Address:</strong><br>${address}</p>
-        <p style="margin: 0.5rem 0;"><strong style="color: var(--color-bronze);">🌐 GPS:</strong><br>Lat: ${location.latitude.toFixed(6)}, Lng: ${location.longitude.toFixed(6)}</p>
-        <p style="margin: 0.5rem 0;"><strong style="color: var(--color-bronze);">🎯 Accuracy:</strong> ${Math.round(location.accuracy)}m</p>
-        <p style="margin: 0.5rem 0; color: var(--color-success);">✓ Last updated: ${new Date().toLocaleTimeString()}</p>
-      </div>
-    `;
-  } catch (error) {
-    container.innerHTML = `<p style="color: var(--color-danger);">Error getting location</p>`;
-  }
-}
-
-// ==================== ACCOUNT LINKING ====================
-async function linkAccount() {
-  // Create a custom dialog
-  const dialog = document.createElement('div');
-  dialog.style.cssText = `
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0,0,0,0.9);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 10000;
-    padding: 20px;
-  `;
-
-  dialog.innerHTML = `
-    <div style="background: var(--color-dark); border: 2px solid var(--color-bronze); border-radius: 12px; padding: 24px; max-width: 400px; width: 100%;">
-      <h3 style="color: var(--color-bronze); margin: 0 0 8px 0; font-size: 1.25rem;">🔗 Link Your Account</h3>
-      <p style="color: var(--color-silver); margin: 0 0 16px 0; font-size: 0.875rem;">Enter your ABC Security account number:</p>
-      <p style="color: #888; margin: 0 0 16px 0; font-size: 0.75rem;">(e.g., ABC-12345)</p>
-      <input type="text" id="accountInput" placeholder="ABC-12345" style="width: 100%; padding: 12px; background: rgba(0,0,0,0.5); border: 1px solid var(--color-bronze); border-radius: 6px; color: var(--color-silver); font-size: 1rem; font-family: monospace; text-transform: uppercase; margin-bottom: 16px;" />
-      <div style="display: flex; gap: 8px;">
-        <button id="cancelBtn" style="flex: 1; padding: 12px; background: rgba(255,59,48,0.2); color: #FF3B30; border: 1px solid #FF3B30; border-radius: 6px; font-weight: 600; cursor: pointer;">Cancel</button>
-        <button id="confirmBtn" style="flex: 1; padding: 12px; background: var(--color-bronze); color: #000; border: none; border-radius: 6px; font-weight: 700; cursor: pointer;">OK</button>
-      </div>
-      <div id="linkError" style="color: #FF3B30; margin-top: 12px; font-size: 0.875rem; display: none;"></div>
-    </div>
-  `;
-
-  document.body.appendChild(dialog);
-
-  const input = dialog.querySelector('#accountInput');
-  const confirmBtn = dialog.querySelector('#confirmBtn');
-  const cancelBtn = dialog.querySelector('#cancelBtn');
-  const errorDiv = dialog.querySelector('#linkError');
-
-  // Focus input
-  setTimeout(() => input.focus(), 100);
-
-  // Handle cancel
-  cancelBtn.onclick = () => {
-    document.body.removeChild(dialog);
-  };
-
-  // Handle confirm
-  confirmBtn.onclick = async () => {
-    const accountNumber = input.value.trim().toUpperCase();
-
-    if (!accountNumber) {
-      errorDiv.textContent = 'Please enter an account number';
-      errorDiv.style.display = 'block';
-      return;
-    }
-
-    // Validate account number format
-    if (!accountNumber.match(/^ABC-\d{5}$/)) {
-      errorDiv.textContent = 'Invalid format. Must be: ABC-12345';
-      errorDiv.style.display = 'block';
-      return;
-    }
-
-    try {
-      confirmBtn.textContent = 'Linking...';
-      confirmBtn.disabled = true;
-
-      await setDoc(doc(db, 'users', currentUser.uid), {
-        accountNumber: accountNumber,
-        accountLinkedAt: serverTimestamp()
-      }, { merge: true });
-
-      // Update display
-      const accountNumberEl = document.getElementById('accountNumber');
-      if (accountNumberEl) {
-        accountNumberEl.textContent = accountNumber;
-        accountNumberEl.style.color = 'var(--color-success)';
-      }
-
-      // Close dialog
-      document.body.removeChild(dialog);
-
-      // Show success
-      alert(`✓ Account Linked!\n\nYour account ${accountNumber} has been successfully linked.\n\nControl Room can now identify you by your account number.`);
-
-      console.log('✓ Account linked successfully:', accountNumber);
-
-    } catch (error) {
-      console.error('Error linking account:', error);
-      errorDiv.textContent = 'Error linking account. Please try again.';
-      errorDiv.style.display = 'block';
-      confirmBtn.textContent = 'OK';
-      confirmBtn.disabled = false;
-    }
-  };
-
-  // Handle Enter key
-  input.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-      confirmBtn.click();
-    }
-  });
-}
-
-// ==================== SAFETY CHECK-IN ====================
-let checkInActive = false;
-let checkInTimer = null;
-let checkInTimeout = null;
-
-async function loadCheckInStatus() {
-  const statusEl = document.getElementById('checkInStatus');
-  const iconEl = document.getElementById('checkInIcon');
-  const btn = document.getElementById('toggleCheckInBtn');
-
-  if (checkInActive) {
-    const interval = document.getElementById('checkInInterval').value;
-    statusEl.textContent = `🟢 Active - Checking every ${interval} min`;
-    iconEl.textContent = '✅';
-    btn.textContent = '🛑 Stop Check-In';
-    btn.style.background = 'var(--color-danger)';
-    btn.style.color = '#fff';
-  } else {
-    statusEl.textContent = 'Inactive';
-    iconEl.textContent = '⏸️';
-    btn.textContent = '🟢 Start Check-In';
-    btn.style.background = 'var(--color-success)';
-    btn.style.color = '#fff';
-  }
-}
-
-async function toggleCheckIn() {
-  if (checkInActive) {
-    // Stop check-in
-    checkInActive = false;
-    if (checkInTimer) clearInterval(checkInTimer);
-    if (checkInTimeout) clearTimeout(checkInTimeout);
-    checkInTimer = null;
-    checkInTimeout = null;
-
-    try {
-      await setDoc(doc(db, 'users', currentUser.uid), {
-        safetyCheckIn: {
-          active: false,
-          stoppedAt: serverTimestamp()
-        }
-      }, { merge: true });
-    } catch (error) {
-      console.error('Error stopping check-in:', error);
-    }
-
-    alert('✓ Safety check-in stopped');
-    loadCheckInStatus();
-  } else {
-    // Start check-in
-    const interval = parseInt(document.getElementById('checkInInterval').value);
-    const gracePeriod = parseInt(document.getElementById('checkInGracePeriod').value);
-
-    if (!confirm(`✓ Start Safety Check-In\n\nYou will be asked to check in every ${interval} minutes.\n\nIf you don't respond within ${gracePeriod} minutes, an alert will be sent to Control Room and your emergency contacts.\n\nContinue?`)) {
-      return;
-    }
-
-    checkInActive = true;
-
-    // Start check-in timer
-    checkInTimer = setInterval(() => {
-      requestCheckIn(gracePeriod);
-    }, interval * 60 * 1000);
-
-    try {
-      await setDoc(doc(db, 'users', currentUser.uid), {
-        safetyCheckIn: {
-          active: true,
-          interval: interval,
-          gracePeriod: gracePeriod,
-          startedAt: serverTimestamp()
-        }
-      }, { merge: true });
-    } catch (error) {
-      console.error('Error starting check-in:', error);
-    }
-
-    alert(`✓ Safety check-in started\n\nYou'll receive your first check-in notification in ${interval} minutes.`);
-    loadCheckInStatus();
-  }
-}
-
-function requestCheckIn(gracePeriod) {
-  const response = confirm('✓ SAFETY CHECK-IN\n\nAre you safe?\n\nPress OK to confirm you are safe.\n\nIf you do not respond within ${gracePeriod} minutes, an alert will be sent.');
-
-  if (response) {
-    // User confirmed safety
-    recordCheckIn(true);
-  } else {
-    // User needs help or timeout
-    checkInTimeout = setTimeout(() => {
-      sendCheckInAlert();
-    }, gracePeriod * 60 * 1000);
-  }
-}
-
-async function recordCheckIn(safe) {
-  try {
-    await addDoc(collection(db, 'checkIns'), {
-      userId: currentUser.uid,
-      userEmail: currentUser.email,
-      safe: safe,
-      timestamp: serverTimestamp()
-    });
-
-    if (safe) {
-      console.log('✓ Check-in recorded: User is safe');
-    }
-  } catch (error) {
-    console.error('Error recording check-in:', error);
-  }
-}
-
-async function sendCheckInAlert() {
-  try {
-    const location = await getCurrentLocation();
-    const address = await reverseGeocodeLocation(location.latitude, location.longitude);
-
-    const alert = {
-      type: 'missed-checkin',
-      status: 'pending',
-      priority: 'critical',
-      userId: currentUser.uid,
-      userEmail: currentUser.email,
-      location: {
-        coordinates: {
-          lat: location.latitude,
-          lng: location.longitude,
-          accuracy: location.accuracy
-        },
-        address: address,
-        timestamp: serverTimestamp()
-      },
-      message: 'User failed to respond to safety check-in',
-      createdAt: serverTimestamp()
-    };
-
-    await addDoc(collection(db, 'incidents'), alert);
-
-    alert('⚠️ MISSED CHECK-IN ALERT SENT\n\nControl Room and your emergency contacts have been notified that you did not respond to your safety check-in.');
-  } catch (error) {
-    console.error('Error sending check-in alert:', error);
-  }
 }
 
 // Initialize app when DOM is ready

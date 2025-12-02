@@ -37,14 +37,8 @@
     <!-- Login Screen -->
     <div class="container hidden" id="loginScreen">
       <div class="app-header">
-        <div style="display: flex; flex-direction: column; align-items: center; gap: 1rem; margin-bottom: 1rem;">
-          <img src="images/logo.svg" alt="ABC Security Logo" style="width: 100px; height: 100px;">
-          <h1 class="app-title" id="appTitle" style="margin: 0;">ABC SECURITY</h1>
-        </div>
-        <div class="powered-by-container">
-          <div class="powered-by-text">POWERED BY WSN GROUP</div>
-          <div class="powered-by-shadow">POWERED BY WSN GROUP</div>
-        </div>
+        <h1 class="app-title" id="appTitle" style="font-size: 2.5rem;">ABC SECURITY</h1>
+        <p class="app-tagline"><span style="font-size: 0.8em;">Powered by WSN GROUP</span></p>
       </div>
 
       <div class="card card-metallic">
@@ -79,15 +73,9 @@
 
     <!-- Registration Screen -->
     <div class="container hidden" id="registerScreen">
-      <div class="app-header" style="position: relative;">
-        <div style="display: flex; flex-direction: column; align-items: center; gap: 0.5rem;">
-          <img src="images/logo.svg" alt="ABC Security Logo" style="width: 80px; height: 80px;">
-          <h1 class="app-title" style="margin: 0;">Create Account</h1>
-          <p class="app-tagline">Join ABC SECURITY</p>
-        </div>
-        <button class="btn btn-danger" id="showLoginBtn" style="position: absolute; top: 0; right: 0; padding: 0.5rem 1rem; font-size: 0.875rem;">
-          ✕ Back
-        </button>
+      <div class="app-header">
+        <h1 class="app-title">Create Account</h1>
+        <p class="app-tagline">Join SSS Guardian</p>
       </div>
 
       <div class="card card-metallic">
@@ -128,34 +116,39 @@
             ✓ Create Account
           </button>
         </form>
+
+        <div class="text-center mt-md">
+          <button class="btn btn-secondary" id="showLoginBtn">
+            ← Back to Login
+          </button>
+        </div>
       </div>
     </div>
 
     <!-- Main Dashboard -->
     <div class="container hidden" id="dashboardScreen">
-      <div class="app-header" style="position: relative;">
-        <div style="display: flex; flex-direction: column; align-items: center; gap: 0.5rem; width: 100%;">
-          <img src="images/logo.svg" alt="ABC Security Logo" style="width: 80px; height: 80px;">
-          <h1 class="app-title" style="margin: 0; font-size: 1.75rem;">ABC SECURITY</h1>
-          <div class="powered-by-container">
-            <div class="powered-by-text">POWERED BY WSN GROUP</div>
-            <div class="powered-by-shadow">POWERED BY WSN GROUP</div>
-          </div>
-          <h2 class="text-center" id="welcomeMessage" style="margin: 0.5rem 0 0 0; font-size: 1.25rem;">Welcome, User</h2>
-
-          <!-- Account Info Card -->
-          <div style="background: rgba(212,175,55,0.1); border: 1px solid rgba(212,175,55,0.3); border-radius: 8px; padding: 8px 16px; margin-top: 0.5rem; display: flex; flex-direction: column; align-items: center; gap: 4px;">
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <span style="color: var(--color-bronze); font-size: 0.75rem; font-weight: 600;">Account #:</span>
-              <span id="accountNumber" style="color: var(--color-silver); font-size: 0.75rem; font-family: monospace;">Not Linked</span>
-            </div>
-            <button class="btn" id="linkAccountBtn" style="background: rgba(212,175,55,0.2); color: var(--color-bronze); border: 1px solid var(--color-bronze); padding: 4px 12px; font-size: 0.75rem; font-weight: 600;">
-              🔗 Link Account
-            </button>
-          </div>
+      <div class="app-header">
+        <h2 class="text-center" id="welcomeMessage">Welcome, User</h2>
+        <p class="text-silver text-center">Emergency Response</p>
+        <div class="text-center mt-sm">
+          <button class="btn btn-secondary" id="logoutBtn"
+            style="padding: 0.5rem 1rem; font-size: 0.875rem;">Logout</button>
         </div>
-        <button class="btn btn-danger" id="logoutBtn" style="position: absolute; top: 0; right: 0; padding: 0.5rem 1rem; font-size: 0.875rem;">
-          Logout
+      </div>
+
+      <!-- Ghost Panic - Silent Alarm -->
+      <div class="card"
+        style="background: linear-gradient(135deg, rgba(139,0,0,0.2) 0%, rgba(0,0,0,0.4) 100%); border: 2px solid #8B0000; margin-bottom: 1.5rem;">
+        <div style="text-align: center; margin-bottom: 1rem;">
+          <h3 style="color: #8B0000; font-size: 1.2rem; margin-bottom: 0.5rem;">🔕 GHOST PANIC</h3>
+          <p style="color: #888; font-size: 0.85rem; line-height: 1.4;">
+            <strong>SILENT ALARM</strong> - Sends alert to control room then <strong>CLOSES APP</strong><br>
+            <span style="color: #8B0000;">⚠️ Use when attacker is watching your phone</span>
+          </p>
+        </div>
+        <button class="btn btn-full" id="ghostPanicBtn"
+          style="background: linear-gradient(135deg, #8B0000 0%, #5C0000 100%); color: white; font-weight: 700; font-size: 1.1rem; padding: 1rem; border: 2px solid #FF0000;">
+          🔕 ACTIVATE GHOST PANIC
         </button>
       </div>
 
@@ -178,18 +171,10 @@
         </button>
 
         <button class="emergency-button btn-fire" data-type="fire">
-          <img src="images/fire.png" alt="FIRE & RESCUE" class="emergency-icon">
+          <img src="images/fire.png" alt="Fire & Rescue" class="emergency-icon">
           <div class="emergency-text">
-            <span class="emergency-label">FIRE & RESCUE</span>
+            <span class="emergency-label">Fire & Rescue</span>
             <span class="emergency-sublabel">Fire Department</span>
-          </div>
-        </button>
-
-        <button class="emergency-button btn-incident-report" id="incidentReportBtn">
-          <img src="images/incident-report.svg" alt="Incident Report" class="emergency-icon">
-          <div class="emergency-text">
-            <span class="emergency-label">INCIDENT REPORT</span>
-            <span class="emergency-sublabel">Report Suspicious Activity</span>
           </div>
         </button>
 
@@ -202,44 +187,18 @@
         </button>
       </div>
 
-      <!-- Professional Panic Features - Based on Real Security Industry Experience -->
-      <div class="card mt-lg" style="background: linear-gradient(135deg, rgba(212,175,55,0.1) 0%, rgba(0,0,0,0.3) 100%);">
-        <h3 class="mb-md" style="color: var(--color-bronze);">⚡ Panic Features</h3>
-        <div class="flex flex-column gap-sm">
-          <!-- Ghost Alarm - Revolutionary invisible panic -->
-          <button class="btn btn-full" id="silentAlarmBtn" style="background: linear-gradient(135deg, #8B0000 0%, #5A0000 100%); color: white; font-weight: 700; box-shadow: 0 4px 15px rgba(139,0,0,0.6); border: 2px solid #FF0000;">
-            ⚠️ GHOST ALARM
-          </button>
-
-          <!-- One-Tap Call Control Room -->
-          <button class="btn btn-full" id="callControlBtn" style="background: var(--color-bronze); color: #000; font-weight: 700;">
-            📞 Call Control Room Now
-          </button>
-
-          <!-- Share Live Location -->
-          <button class="btn btn-secondary btn-full" id="shareLiveLocationBtn">
-            📍 Share My Live Location
-          </button>
-
-          <!-- Notify Family/Emergency Contacts -->
-          <button class="btn btn-secondary btn-full" id="notifyFamilyBtn">
-            👨‍👩‍👧‍👦 Alert My Family
-          </button>
-        </div>
-      </div>
-
-      <!-- Safety Tools -->
-      <div class="card mt-md">
-        <h3 class="mb-md">🛡️ Safety Tools</h3>
+      <!-- Quick Actions -->
+      <div class="card mt-lg">
+        <h3 class="mb-md">Quick Actions</h3>
         <div class="flex flex-column gap-sm">
           <button class="btn btn-secondary btn-full" id="viewHistoryBtn">
-            📜 My Incidents
+            📜 View Incident History
           </button>
-          <button class="btn btn-secondary btn-full" id="emergencyContactsBtn">
-            ☎️ Emergency Contacts
+          <button class="btn btn-secondary btn-full" id="manageDependantsBtn">
+            👥 Manage Dependants
           </button>
-          <button class="btn btn-secondary btn-full" id="safetyCheckInBtn">
-            ✓ Safety Check-In
+          <button class="btn btn-secondary btn-full" id="callControlBtn">
+            📞 Call Control Room
           </button>
         </div>
       </div>
@@ -247,24 +206,14 @@
 
     <!-- Active Incident Screen -->
     <div class="container hidden" id="incidentScreen">
-      <div class="app-header" style="position: relative;">
-        <div style="display: flex; flex-direction: column; align-items: center; gap: 0.5rem;">
-          <img src="images/logo.svg" alt="ABC Security Logo" style="width: 60px; height: 60px;">
-          <h2 class="text-center" style="margin: 0;">🚨 Emergency Active</h2>
-          <div class="powered-by-container">
-            <div class="powered-by-text">POWERED BY WSN GROUP</div>
-            <div class="powered-by-shadow">POWERED BY WSN GROUP</div>
-          </div>
-        </div>
-        <div class="flex justify-center mt-md">
+      <div class="app-header">
+        <h2 class="text-center">🚨 Emergency Active</h2>
+        <div class="flex justify-center mt-sm">
           <span class="status-badge status-dispatched" id="incidentStatus">
             <span class="status-dot"></span>
             Dispatching...
           </span>
         </div>
-        <button class="btn btn-danger" id="backToDashboardBtn" style="position: absolute; top: 0; right: 0; padding: 0.5rem 1rem; font-size: 0.875rem;">
-          ✕ Close
-        </button>
       </div>
 
       <div class="card card-metallic">
@@ -281,7 +230,7 @@
           </div>
           <div class="info-row">
             <span class="info-label">Location:</span>
-            <span class="info-value" id="incidentLocation">...</span>
+            <span class="info-value" id="incidentLocation">Fetching GPS...</span>
           </div>
           <div class="info-row">
             <span class="info-label">Time:</span>
@@ -323,332 +272,37 @@
           </button>
         </div>
       </div>
-    </div>
 
-    <!-- Incident Report Screen -->
-    <div class="container hidden" id="incidentReportScreen">
-      <div class="app-header" style="position: relative;">
-        <div style="display: flex; flex-direction: column; align-items: center; gap: 0.5rem;">
-          <img src="images/logo.svg" alt="ABC Security Logo" style="width: 60px; height: 60px;">
-          <h2 class="text-center" style="margin: 0; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
-            <img src="images/incident-report.svg" alt="Report" style="width: 28px; height: 28px;">
-            Incident Report
-          </h2>
-          <div class="powered-by-container">
-            <div class="powered-by-text">POWERED BY WSN GROUP</div>
-            <div class="powered-by-shadow">POWERED BY WSN GROUP</div>
-          </div>
-          <p class="text-silver text-center" style="margin-top: 0.5rem; font-size: 0.875rem;">Select Category</p>
-        </div>
-        <button class="btn btn-danger" id="backFromReportBtn" style="position: absolute; top: 0; right: 0; padding: 0.5rem 1rem; font-size: 0.875rem;">
+      <div class="text-center mt-md">
+        <button class="btn btn-secondary" id="backToDashboardBtn">
           ← Back to Dashboard
         </button>
       </div>
-
-      <div class="card card-metallic">
-        <h3 class="mb-md">What would you like to report?</h3>
-
-        <div class="incident-categories">
-          <button class="category-btn" data-category="suspicious-behaviour">
-            🔍 Suspicious Behaviour
-          </button>
-          <button class="category-btn" data-category="noise-complaint">
-            🔊 Noise Complaint
-          </button>
-          <button class="category-btn" data-category="vandalism">
-            🏚️ Vandalism / Property Damage
-          </button>
-          <button class="category-btn" data-category="trespassing">
-            🚷 Trespassing
-          </button>
-          <button class="category-btn" data-category="lost-found">
-            📦 Lost & Found
-          </button>
-          <button class="category-btn" data-category="traffic-incident">
-            🚗 Traffic Incident
-          </button>
-          <button class="category-btn" data-category="other">
-            📋 Other
-          </button>
-        </div>
-      </div>
     </div>
 
-    <!-- Incident Report Details Screen -->
-    <div class="container hidden" id="incidentReportDetailsScreen">
-      <div class="app-header" style="position: relative;">
-        <div style="display: flex; flex-direction: column; align-items: center; gap: 0.5rem;">
-          <img src="images/logo.svg" alt="ABC Security Logo" style="width: 60px; height: 60px;">
-          <h2 class="text-center" style="margin: 0; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
-            <img src="images/incident-report.svg" alt="Report" style="width: 28px; height: 28px;">
-            Report Details
-          </h2>
-          <div class="powered-by-container">
-            <div class="powered-by-text">POWERED BY WSN GROUP</div>
-            <div class="powered-by-shadow">POWERED BY WSN GROUP</div>
-          </div>
-          <p class="text-silver text-center" id="reportCategory" style="margin-top: 0.5rem; font-size: 0.875rem;">Suspicious Behaviour</p>
-        </div>
-        <button class="btn btn-danger" id="backToReportCategoriesBtn" style="position: absolute; top: 0; right: 0; padding: 0.5rem 1rem; font-size: 0.875rem;">
-          ← Back to Categories
-        </button>
-      </div>
-
-      <div class="card card-metallic">
-        <form id="incidentReportForm">
-          <div class="form-group">
-            <label for="reportDetails" class="form-label">What did you observe?</label>
-            <div style="position: relative;">
-              <textarea
-                id="reportDetails"
-                class="form-input"
-                rows="6"
-                placeholder="Please describe what you saw or experienced in as much detail as possible..."
-                required
-              ></textarea>
-              <button type="button" id="voiceInputBtn" class="btn btn-secondary" style="margin-top: 0.5rem; padding: 0.75rem;">
-                🎤 Use Voice Input
-              </button>
-              <p id="voiceStatus" class="text-center" style="margin-top: 0.5rem; color: #9B59B6; font-size: 0.875rem; display: none;"></p>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label for="reportLocation" class="form-label">Location (Optional)</label>
-            <input
-              type="text"
-              id="reportLocation"
-              class="form-input"
-              placeholder="Specific location or address"
-            >
-          </div>
-
-          <div id="reportError" class="text-error text-center mb-sm hidden"></div>
-
-          <button type="submit" class="btn btn-primary btn-full btn-lg">
-            📤 Submit Report
-          </button>
-        </form>
-      </div>
-
-    </div>
-
-    <!-- Incident History Screen -->
-    <div class="container hidden" id="incidentHistoryScreen">
-      <div class="app-header" style="position: relative;">
-        <div style="display: flex; flex-direction: column; align-items: center; gap: 0.5rem;">
-          <img src="images/logo.svg" alt="ABC Security Logo" style="width: 60px; height: 60px;">
-          <h2 class="text-center" style="margin: 0;">📜 My Incident History</h2>
-          <div class="powered-by-container">
-            <div class="powered-by-text">POWERED BY WSN GROUP</div>
-            <div class="powered-by-shadow">POWERED BY WSN GROUP</div>
-          </div>
-          <p class="text-silver text-center" style="margin-top: 0.5rem; font-size: 0.875rem;">All your past incidents</p>
-        </div>
-        <button class="btn btn-danger" id="backFromHistoryBtn" style="position: absolute; top: 0; right: 0; padding: 0.5rem 1rem; font-size: 0.875rem;">
-          ← Back to Dashboard
-        </button>
-      </div>
-
-      <div id="historyContainer" style="padding: 0 1rem;">
-        <!-- Incidents will be loaded here -->
-      </div>
-
-      <div id="noHistoryMessage" class="card card-metallic hidden" style="text-align: center; padding: 2rem;">
-        <div style="font-size: 3rem; margin-bottom: 1rem;">📭</div>
-        <h3 style="color: var(--color-silver); margin-bottom: 0.5rem;">No Incidents Yet</h3>
-        <p style="color: var(--color-silver); opacity: 0.7;">Your incident history will appear here</p>
-      </div>
-
-      <div id="historyLoading" class="card card-metallic" style="text-align: center; padding: 2rem;">
-        <div class="spinner" style="margin: 0 auto 1rem auto;"></div>
-        <p style="color: var(--color-silver);">Loading your incident history...</p>
-      </div>
-    </div>
-
-    <!-- Emergency Contacts Screen -->
-    <div class="container hidden" id="emergencyContactsScreen">
-      <div class="app-header" style="position: relative;">
-        <div style="display: flex; flex-direction: column; align-items: center; gap: 0.5rem;">
-          <img src="images/logo.svg" alt="ABC Security Logo" style="width: 60px; height: 60px;">
-          <h2 class="text-center" style="margin: 0;">☎️ Emergency Contacts</h2>
-          <div class="powered-by-container">
-            <div class="powered-by-text">POWERED BY WSN GROUP</div>
-            <div class="powered-by-shadow">POWERED BY WSN GROUP</div>
-          </div>
-          <p class="text-silver text-center" style="margin-top: 0.5rem; font-size: 0.875rem;">Your trusted emergency contacts</p>
-        </div>
-        <button class="btn btn-danger" id="backFromContactsBtn" style="position: absolute; top: 0; right: 0; padding: 0.5rem 1rem; font-size: 0.875rem;">
-          ← Back
-        </button>
-      </div>
-
-      <div style="padding: 0 1rem;">
-        <div class="card card-metallic" style="margin-bottom: 1rem;">
-          <h3 style="color: var(--color-bronze); margin-bottom: 1rem;">➕ Add New Contact</h3>
-          <form id="addContactForm">
-            <div class="form-group">
-              <label>Name</label>
-              <input type="text" id="contactName" class="form-control" placeholder="e.g., Mom, Dad, Spouse" required>
-            </div>
-            <div class="form-group">
-              <label>Phone Number</label>
-              <input type="tel" id="contactPhone" class="form-control" placeholder="e.g., 0821234567" required>
-            </div>
-            <div class="form-group">
-              <label>Relationship</label>
-              <select id="contactRelationship" class="form-control" required>
-                <option value="">Select relationship...</option>
-                <option value="spouse">Spouse/Partner</option>
-                <option value="parent">Parent</option>
-                <option value="child">Child</option>
-                <option value="sibling">Sibling</option>
-                <option value="friend">Friend</option>
-                <option value="colleague">Colleague</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-            <button type="submit" class="btn btn-full" style="background: var(--color-bronze); color: #000; font-weight: 700;">
-              ➕ Add Contact
-            </button>
-          </form>
-        </div>
-
-        <div id="contactsList">
-          <!-- Contacts will be loaded here -->
-        </div>
-
-        <div id="noContactsMessage" class="card card-metallic hidden" style="text-align: center; padding: 2rem;">
-          <div style="font-size: 3rem; margin-bottom: 1rem;">📭</div>
-          <h3 style="color: var(--color-silver); margin-bottom: 0.5rem;">No Emergency Contacts</h3>
-          <p style="color: var(--color-silver); opacity: 0.7;">Add contacts above to alert them in emergencies</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Safety Check-In Screen -->
-    <div class="container hidden" id="safetyCheckInScreen">
-      <div class="app-header" style="position: relative;">
-        <div style="display: flex; flex-direction: column; align-items: center; gap: 0.5rem;">
-          <img src="images/logo.svg" alt="ABC Security Logo" style="width: 60px; height: 60px;">
-          <h2 class="text-center" style="margin: 0;">✓ Safety Check-In</h2>
-          <div class="powered-by-container">
-            <div class="powered-by-text">POWERED BY WSN GROUP</div>
-            <div class="powered-by-shadow">POWERED BY WSN GROUP</div>
-          </div>
-          <p class="text-silver text-center" style="margin-top: 0.5rem; font-size: 0.875rem;">Automated welfare checks</p>
-        </div>
-        <button class="btn btn-danger" id="backFromCheckInBtn" style="position: absolute; top: 0; right: 0; padding: 0.5rem 1rem; font-size: 0.875rem;">
-          ← Back
-        </button>
-      </div>
-
-      <div style="padding: 0 1rem;">
-        <div class="card card-metallic" style="margin-bottom: 1rem;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-            <div>
-              <h3 style="color: var(--color-bronze); margin: 0;">Check-In Status</h3>
-              <p id="checkInStatus" style="color: var(--color-silver); font-size: 0.875rem; margin-top: 0.5rem;">Inactive</p>
-            </div>
-            <div style="font-size: 3rem;" id="checkInIcon">⏸️</div>
-          </div>
-          <button class="btn btn-full" id="toggleCheckInBtn" style="background: var(--color-success); color: #fff; font-weight: 700;">
-            🟢 Start Check-In
-          </button>
-        </div>
-
-        <div class="card card-metallic" style="margin-bottom: 1rem;">
-          <h3 style="color: var(--color-bronze); margin-bottom: 1rem;">⚙️ Check-In Settings</h3>
-          <div class="form-group">
-            <label>Check-In Interval</label>
-            <select id="checkInInterval" class="form-control">
-              <option value="30">Every 30 minutes</option>
-              <option value="60" selected>Every 1 hour</option>
-              <option value="120">Every 2 hours</option>
-              <option value="180">Every 3 hours</option>
-              <option value="240">Every 4 hours</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Grace Period (if you miss check-in)</label>
-            <select id="checkInGracePeriod" class="form-control">
-              <option value="5">5 minutes</option>
-              <option value="10">10 minutes</option>
-              <option value="15" selected>15 minutes</option>
-              <option value="30">30 minutes</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="card card-metallic" style="background: rgba(255, 204, 0, 0.1); border: 1px solid rgba(255, 204, 0, 0.3);">
-          <h4 style="color: var(--color-warning); margin-bottom: 0.5rem;">ℹ️ How It Works</h4>
-          <ul style="color: var(--color-silver); font-size: 0.875rem; padding-left: 1.5rem; line-height: 1.6;">
-            <li>You'll receive notifications at your chosen interval</li>
-            <li>Tap the notification to confirm you're safe</li>
-            <li>If you don't respond within the grace period, an alert is sent to Control Room and your emergency contacts</li>
-            <li>Perfect for night shifts, lone working, or high-risk situations</li>
-          </ul>
-        </div>
-      </div>
-    </div>
-
-    <!-- Live Location Sharing Screen -->
-    <div class="container hidden" id="liveLocationScreen">
-      <div class="app-header" style="position: relative;">
-        <div style="display: flex; flex-direction: column; align-items: center; gap: 0.5rem;">
-          <img src="images/logo.svg" alt="ABC Security Logo" style="width: 60px; height: 60px;">
-          <h2 class="text-center" style="margin: 0;">📍 Live Location</h2>
-          <div class="powered-by-container">
-            <div class="powered-by-text">POWERED BY WSN GROUP</div>
-            <div class="powered-by-shadow">POWERED BY WSN GROUP</div>
-          </div>
-          <p class="text-silver text-center" style="margin-top: 0.5rem; font-size: 0.875rem;">Real-time GPS tracking</p>
-        </div>
-        <button class="btn btn-danger" id="backFromLocationBtn" style="position: absolute; top: 0; right: 0; padding: 0.5rem 1rem; font-size: 0.875rem;">
-          ← Back
-        </button>
-      </div>
-
-      <div style="padding: 0 1rem;">
-        <div class="card card-metallic" style="margin-bottom: 1rem;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-            <div>
-              <h3 style="color: var(--color-bronze); margin: 0;">Location Sharing</h3>
-              <p id="locationStatus" style="color: var(--color-silver); font-size: 0.875rem; margin-top: 0.5rem;">Not active</p>
-            </div>
-            <div style="font-size: 3rem;" id="locationIcon">📍</div>
-          </div>
-          <button class="btn btn-full" id="toggleLocationBtn" style="background: var(--color-primary); color: #000; font-weight: 700;">
-            📍 Start Sharing Location
-          </button>
-        </div>
-
-        <div class="card card-metallic" style="margin-bottom: 1rem;">
-          <h3 style="color: var(--color-bronze); margin-bottom: 1rem;">📊 Current Location</h3>
-          <div id="currentLocationInfo">
-            <p style="color: var(--color-silver); font-size: 0.875rem;">Start sharing to see your location</p>
-          </div>
-        </div>
-
-        <div class="card card-metallic" style="background: rgba(0, 122, 255, 0.1); border: 1px solid rgba(0, 122, 255, 0.3);">
-          <h4 style="color: #007AFF; margin-bottom: 0.5rem;">ℹ️ When to Use</h4>
-          <ul style="color: var(--color-silver); font-size: 0.875rem; padding-left: 1.5rem; line-height: 1.6;">
-            <li>Walking alone at night</li>
-            <li>Entering unfamiliar areas</li>
-            <li>During active emergencies</li>
-            <li>Meeting unknown people</li>
-            <li>Traveling to isolated locations</li>
-          </ul>
-          <p style="color: var(--color-warning); font-size: 0.875rem; margin-top: 1rem; font-weight: 600;">
-            ⚠️ Control Room can see your real-time movement
-          </p>
-        </div>
-      </div>
-    </div>
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav hidden" id="bottomNav">
+      <a href="#" class="nav-item active" data-screen="dashboard">
+        <span class="nav-icon">🏠</span>
+        <span>Home</span>
+      </a>
+      <a href="#" class="nav-item" data-screen="history">
+        <span class="nav-icon">📜</span>
+        <span>History</span>
+      </a>
+      <a href="#" class="nav-item" data-screen="profile">
+        <span class="nav-icon">👤</span>
+        <span>Profile</span>
+      </a>
+      <a href="#" class="nav-item" data-screen="settings">
+        <span class="nav-icon">⚙️</span>
+        <span>Settings</span>
+      </a>
+    </nav>
   </div>
 
   <!-- Scripts -->
-  <script type="module" src="js/app-production.js?v=6"></script>
+  <script type="module" src="js/app-production.js?v=5"></script>
 
   <style>
     .info-row {

@@ -185,6 +185,16 @@
             <span class="emergency-sublabel">Non-Emergency</span>
           </div>
         </button>
+
+        <button class="emergency-button btn-report" data-type="incident-report"
+          style="grid-column: 1 / -1; background: linear-gradient(135deg, #2c3e50 0%, #000000 100%); border: 1px solid #9B59B6;">
+          <img src="images/incident-report.svg" alt="Report Incident" class="emergency-icon"
+            onerror="this.src='images/technical.png'">
+          <div class="emergency-text">
+            <span class="emergency-label" style="color: #9B59B6;">INCIDENT REPORT</span>
+            <span class="emergency-sublabel">Report Suspicious Activity</span>
+          </div>
+        </button>
       </div>
 
       <!-- Quick Actions -->
@@ -252,6 +262,64 @@
           <div class="info-row">
             <span class="info-label">Unit:</span>
             <span class="info-value" id="unitName">-</span>
+          </div>
+
+          <!-- Incident Report Screen -->
+          <div class="container hidden" id="reportScreen">
+            <div class="app-header">
+              <h2 class="text-center" style="color: #9B59B6;">📋 Report Incident</h2>
+              <p class="text-silver text-center">Submit Evidence & Details</p>
+            </div>
+
+            <div class="card card-metallic">
+              <form id="incidentReportForm">
+                <div class="form-group">
+                  <label class="form-label">Incident Category</label>
+                  <select id="reportCategory" class="form-input" required>
+                    <option value="">Select Category...</option>
+                    <option value="suspicious_activity">Suspicious Activity</option>
+                    <option value="theft">Theft / Burglary</option>
+                    <option value="vandalism">Vandalism</option>
+                    <option value="noise">Noise Disturbance</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Description</label>
+                  <textarea id="reportDescription" class="form-input" rows="4" placeholder="Describe what happened..."
+                    required></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Location</label>
+                  <input type="text" id="reportLocation" class="form-input" placeholder="Fetching location..." readonly>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Evidence (Photo/Video)</label>
+                  <div class="file-upload-container" id="fileUploadContainer"
+                    style="border: 2px dashed #444; padding: 20px; text-align: center; border-radius: 8px; cursor: pointer;">
+                    <span style="font-size: 2rem;">📸</span>
+                    <p style="margin-top: 10px; color: #888;">Tap to upload photo or video</p>
+                    <input type="file" id="reportFiles" class="hidden" accept="image/*,video/*" multiple>
+                  </div>
+                  <div id="filePreview" style="margin-top: 10px; display: flex; flex-wrap: wrap; gap: 10px;"></div>
+                </div>
+
+                <div id="reportError" class="text-error text-center mb-sm hidden"></div>
+
+                <button type="submit" class="btn btn-full btn-lg" style="background: #9B59B6; color: white;">
+                  Submit Report
+                </button>
+              </form>
+
+              <div class="text-center mt-md">
+                <button class="btn btn-secondary" id="cancelReportBtn">
+                  Cancel
+                </button>
+              </div>
+            </div>
           </div>
           <div class="info-row">
             <span class="info-label">Officer:</span>

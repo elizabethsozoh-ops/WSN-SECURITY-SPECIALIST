@@ -2,6 +2,7 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 import { getFirestore, collection, addDoc, setDoc, doc, getDoc, getDocs, query, where, orderBy, onSnapshot, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
 
 // Firebase Configuration
 const firebaseConfig = {
@@ -17,6 +18,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const storage = getStorage(app);
 
 // App State
 let currentUser = null;
@@ -83,7 +85,7 @@ function applyBranding() {
 
 // Screen Management
 function showScreen(screenName) {
-  const screens = ['loginScreen', 'registerScreen', 'dashboardScreen', 'incidentScreen'];
+  const screens = ['loginScreen', 'registerScreen', 'dashboardScreen', 'incidentScreen', 'reportScreen'];
   screens.forEach(screen => {
     document.getElementById(screen)?.classList.add('hidden');
   });
@@ -179,6 +181,17 @@ function setupEventListeners() {
 
   document.getElementById('callUnitBtn')?.addEventListener('click', () => {
     alert('📞 Calling responding unit...');
+  });
+
+  // Incident Report Handlers
+  document.getElementById('fileUploadContainer')?.addEventListener('click', () => {
+    document.getElementById('reportFiles').click();
+  });
+
+  document.getElementById('reportFiles')?.addEventListener('change', handleFileSelect);
+  document.getElementById('incidentReportForm')?.addEventListener('submit', handleReportSubmit);
+  document.getElementById('cancelReportBtn')?.addEventListener('click', () => {
+    showScreen('dashboard');
   });
 }
 
@@ -363,6 +376,12 @@ async function loadUserProfile(userId) {
 async function handleEmergencyButton(e) {
   const button = e.currentTarget;
   const emergencyType = button.dataset.type;
+
+  // Handle Incident Report separately
+  if (emergencyType === 'incident-report') {
+    showReportScreen();
+    return;
+  }
 
   const emergencyLabels = {
     panic: 'Armed Response',
@@ -768,6 +787,143 @@ function getErrorMessage(errorCode) {
   };
 
   return errorMessages[errorCode] || 'An error occurred. Please try again.';
+}
+
+// Incident Report Functions
+function showReportScreen() {
+  // Auto-fill location
+  const locationInput = document.getElementById('reportLocation');
+  if (locationInput) {
+    locationInput.value = 'Fetching location...';
+    getCurrentLocation().then(async (loc) => {
+      const address = await reverseGeocodeLocation(loc.latitude, loc.longitude);
+      locationInput.value = address;
+    }).catch(err => {
+      console.error('Location error:', err);
+      locationInput.value = 'Location unavailable';
+    });
+  }
+
+  showScreen('report');
+}
+
+let selectedFiles = [];
+
+function handleFileSelect(e) {
+  const files = Array.from(e.target.files);
+  const previewContainer = document.getElementById('filePreview');
+
+  files.forEach(file => {
+    selectedFiles.push(file);
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const div = document.createElement('div');
+      div.style.position = 'relative';
+      div.style.width = '80px';
+      div.style.height = '80px';
+      div.style.borderRadius = '8px';
+      div.style.overflow = 'hidden';
+      div.style.border = '1px solid #444';
+
+      if (file.type.startsWith('image/')) {
+        div.innerHTML = `<img src="${e.target.result}" style="width:100%; height:100%; object-fit:cover;">`;
+      } else {
+        div.innerHTML = `<div style="width:100%; height:100%; background:#222; display:flex; align-items:center; justify-content:center; font-size:2rem;">🎥</div>`;
+      }
+
+      previewContainer.appendChild(div);
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+async function handleReportSubmit(e) {
+  e.preventDefault();
+  hideError('reportError');
+
+  const category = document.getElementById('reportCategory').value;
+  const description = document.getElementById('reportDescription').value;
+  const locationText = document.getElementById('reportLocation').value;
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+
+  if (!category) {
+    showError('reportError', 'Please select a category');
+    return;
+  }
+
+  try {
+    showLoading();
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Uploading Evidence...';
+
+    // 1. Upload Files
+    const attachments = [];
+    if (selectedFiles.length > 0) {
+      for (const file of selectedFiles) {
+        const fileRef = ref(storage, `evidence/${currentUser.uid}/${Date.now()}_${file.name}`);
+        await uploadBytes(fileRef, file);
+        const url = await getDownloadURL(fileRef);
+        attachments.push({
+          name: file.name,
+          type: file.type.startsWith('image/') ? 'image' : 'video',
+          url: url,
+          size: file.size
+        });
+      }
+    }
+
+    // 2. Get Coordinates
+    const location = await getCurrentLocation();
+
+    // 3. Create Incident
+    const incident = {
+      type: 'incident_report',
+      category: category,
+      description: description,
+      status: 'pending',
+      priority: 'medium',
+      userId: currentUser.uid,
+      userEmail: currentUser.email,
+      companyId: companyConfig.companyId,
+      location: {
+        coordinates: {
+          lat: location.latitude,
+          lng: location.longitude,
+          accuracy: location.accuracy
+        },
+        address: locationText,
+        timestamp: serverTimestamp()
+      },
+      attachments: attachments,
+      timeline: [{
+        timestamp: new Date(),
+        action: 'report_submitted',
+        actor: 'client',
+        note: `Report submitted: ${category}`
+      }],
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    };
+
+    const docRef = await addDoc(collection(db, 'incidents'), incident);
+
+    // Reset form
+    document.getElementById('incidentReportForm').reset();
+    document.getElementById('filePreview').innerHTML = '';
+    selectedFiles = [];
+
+    alert('✓ Report submitted successfully');
+    showScreen('dashboard');
+
+  } catch (error) {
+    console.error('Report error:', error);
+    showError('reportError', 'Error submitting report: ' + error.message);
+  } finally {
+    hideLoading();
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Submit Report';
+  }
 }
 
 // Initialize app when DOM is ready

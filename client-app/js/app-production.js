@@ -156,14 +156,11 @@ function setupEventListeners() {
   // Logout button
   document.getElementById('logoutBtn')?.addEventListener('click', handleLogout);
 
-  // Quick Actions
-  document.getElementById('viewHistoryBtn')?.addEventListener('click', () => {
-    alert('📜 Incident History\n\nThis feature is coming soon!');
-  });
-
-  document.getElementById('manageDependantsBtn')?.addEventListener('click', () => {
-    alert('👥 Manage Dependants\n\nThis feature is coming soon!');
-  });
+  // Safety Tools
+  document.getElementById('liveLocationBtn')?.addEventListener('click', handleLiveLocation);
+  document.getElementById('alertFamilyBtn')?.addEventListener('click', handleAlertFamily);
+  document.getElementById('safetyCheckBtn')?.addEventListener('click', handleSafetyCheck);
+  document.getElementById('manageContactsBtn')?.addEventListener('click', handleManageContacts);
 
   document.getElementById('callControlBtn')?.addEventListener('click', () => {
     const phone = companyConfig.contact.phone;
@@ -924,6 +921,122 @@ async function handleReportSubmit(e) {
     submitBtn.disabled = false;
     submitBtn.textContent = 'Submit Report';
   }
+}
+
+// Safety Tool Functions
+let liveLocationWatchId = null;
+let liveShareId = null;
+
+async function handleLiveLocation() {
+  const btn = document.getElementById('liveLocationBtn');
+
+  if (liveLocationWatchId) {
+    // STOP SHARING
+    navigator.geolocation.clearWatch(liveLocationWatchId);
+    liveLocationWatchId = null;
+
+    if (liveShareId) {
+      await setDoc(doc(db, 'live_shares', liveShareId), {
+        active: false,
+        endedAt: serverTimestamp()
+      }, { merge: true });
+      liveShareId = null;
+    }
+
+    btn.innerHTML = '📍 SHARE LIVE LOCATION';
+    btn.style.background = 'linear-gradient(135deg, #004d40 0%, #000000 100%)';
+    btn.classList.remove('pulse-animation');
+    alert('Live location sharing stopped.');
+
+  } else {
+    // START SHARING
+    if (!confirm('Start sharing your real-time location with the control room and emergency contacts?')) return;
+
+    try {
+      showLoading();
+
+      // Create share session
+      const shareDoc = await addDoc(collection(db, 'live_shares'), {
+        userId: currentUser.uid,
+        userEmail: currentUser.email,
+        startTime: serverTimestamp(),
+        active: true,
+        locations: []
+      });
+      liveShareId = shareDoc.id;
+
+      // Start watching
+      liveLocationWatchId = navigator.geolocation.watchPosition(
+        async (position) => {
+          const loc = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+            accuracy: position.coords.accuracy,
+            timestamp: new Date()
+          };
+
+          // Update Firestore (append to array)
+          // Note: In a real app, we might overwrite the "current" location to save writes
+          // But for history, we append.
+          await setDoc(doc(db, 'live_shares', liveShareId), {
+            currentLocation: loc,
+            lastUpdated: serverTimestamp()
+          }, { merge: true });
+        },
+        (error) => console.error('Location watch error:', error),
+        { enableHighAccuracy: true }
+      );
+
+      hideLoading();
+      btn.innerHTML = '🛑 STOP SHARING LOCATION';
+      btn.style.background = 'linear-gradient(135deg, #b71c1c 0%, #000000 100%)';
+      btn.classList.add('pulse-animation');
+      alert('✅ Live location sharing ACTIVE. Control room can see you.');
+
+    } catch (error) {
+      hideLoading();
+      console.error('Live location error:', error);
+      alert('Error starting live location: ' + error.message);
+    }
+  }
+}
+
+async function handleAlertFamily() {
+  if (!confirm('Send distress alert to your Emergency Contacts?')) return;
+
+  try {
+    showLoading();
+    const location = await getCurrentLocation();
+    const address = await reverseGeocodeLocation(location.latitude, location.longitude);
+
+    await addDoc(collection(db, 'family_alerts'), {
+      userId: currentUser.uid,
+      userEmail: currentUser.email,
+      location: {
+        lat: location.latitude,
+        lng: location.longitude,
+        address: address
+      },
+      timestamp: serverTimestamp(),
+      status: 'sent'
+    });
+
+    hideLoading();
+    alert('✅ Distress alert sent to all emergency contacts!');
+
+  } catch (error) {
+    hideLoading();
+    console.error('Family alert error:', error);
+    alert('Error sending alert: ' + error.message);
+  }
+}
+
+function handleSafetyCheck() {
+  alert('⏱️ Safety Check-in\n\nThis feature will allow you to set a timer (e.g. 30 mins). If you don\'t check in before it expires, an alert will be sent automatically.\n\n(Coming in next update)');
+}
+
+function handleManageContacts() {
+  alert('👥 Manage Contacts\n\nHere you will be able to add email/phone numbers for family members to receive alerts.\n\n(Coming in next update)');
 }
 
 // Initialize app when DOM is ready

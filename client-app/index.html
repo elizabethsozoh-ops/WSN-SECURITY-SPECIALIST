@@ -197,15 +197,33 @@
         </button>
       </div>
 
-      <!-- Quick Actions -->
+      <!-- Safety Tools -->
       <div class="card mt-lg">
-        <h3 class="mb-md">Quick Actions</h3>
+        <h3 class="mb-md">Safety Tools</h3>
         <div class="flex flex-column gap-sm">
-          <button class="btn btn-secondary btn-full" id="viewHistoryBtn">
-            📜 View Incident History
+          <button class="btn btn-full" id="liveLocationBtn"
+            style="background: linear-gradient(135deg, #004d40 0%, #000000 100%); border: 1px solid #009688; color: #009688;">
+            📍 SHARE LIVE LOCATION
           </button>
-          <button class="btn btn-secondary btn-full" id="manageDependantsBtn">
-            👥 Manage Dependants
+
+          <button class="btn btn-full" id="alertFamilyBtn"
+            style="background: linear-gradient(135deg, #3e2723 0%, #000000 100%); border: 1px solid #795548; color: #795548;">
+            👨‍👩‍👧‍👦 ALERT MY FAMILY
+          </button>
+
+          <button class="btn btn-full" id="safetyCheckBtn"
+            style="background: linear-gradient(135deg, #1a237e 0%, #000000 100%); border: 1px solid #3f51b5; color: #3f51b5;">
+            ⏱️ SAFETY CHECK-IN
+          </button>
+        </div>
+      </div>
+
+      <!-- Settings & Support -->
+      <div class="card mt-md">
+        <h3 class="mb-md">Settings</h3>
+        <div class="flex flex-column gap-sm">
+          <button class="btn btn-secondary btn-full" id="manageContactsBtn">
+            👥 Emergency Contacts
           </button>
           <button class="btn btn-secondary btn-full" id="callControlBtn">
             📞 Call Control Room

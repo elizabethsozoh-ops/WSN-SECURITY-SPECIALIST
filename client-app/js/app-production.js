@@ -246,12 +246,12 @@ function setupEventListeners() {
 
   // Quick Actions
   document.getElementById('viewHistoryBtn')?.addEventListener('click', () => {
-    showScreen('incidentHistoryScreen');
+    showScreen('incidentHistory');
     loadIncidentHistory();
   });
 
   document.getElementById('backFromHistoryBtn')?.addEventListener('click', () => {
-    showScreen('dashboardScreen');
+    showScreen('dashboard');
   });
 
   document.getElementById('manageDependantsBtn')?.addEventListener('click', () => {

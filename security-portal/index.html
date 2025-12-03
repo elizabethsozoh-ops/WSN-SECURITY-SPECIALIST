@@ -1715,11 +1715,11 @@
         };
 
         window.exportStatisticsWhatsApp = () => {
-            // Get statistics data
-            const totalToday = document.getElementById('totalToday')?.textContent || '0';
-            const activeNow = document.getElementById('activeNow')?.textContent || '0';
-            const resolved = document.getElementById('resolved')?.textContent || '0';
-            const avgResponse = document.getElementById('avgResponse')?.textContent || '0';
+            // Get statistics data - using correct element IDs
+            const totalToday = document.getElementById('statTotalToday')?.textContent || '0';
+            const activeNow = document.getElementById('statActiveNow')?.textContent || '0';
+            const resolved = document.getElementById('statResolved')?.textContent || '0';
+            const avgResponse = document.getElementById('statAvgResponse')?.textContent || '0';
 
             const message = `📊 *DAILY STATISTICS REPORT*
 

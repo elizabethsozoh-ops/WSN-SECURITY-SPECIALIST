@@ -1089,6 +1089,12 @@
                         </div>
                     </div>
 
+                    <!-- Incident ID -->
+                    <div class="info-row">
+                        <span class="info-label">Incident ID</span>
+                        <span class="info-value" style="font-family: monospace; font-weight: 700; color: var(--color-primary);">${incident.id.substr(0, 8).toUpperCase()}</span>
+                    </div>
+
                     <div class="info-row">
                         <span class="info-label">Client</span>
                         <span class="info-value">${incident.userProfile?.firstName || 'Unknown'} ${incident.userProfile?.lastName || ''}</span>

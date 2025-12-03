@@ -275,7 +275,14 @@ function setupEventListeners() {
   document.getElementById('cancelIncidentBtn')?.addEventListener('click', cancelIncident);
 
   document.getElementById('callUnitBtn')?.addEventListener('click', () => {
-    alert('📞 Calling responding unit...');
+    // Get phone number from assigned unit or use company default
+    const phoneNumber = window.currentIncident?.assignedUnit?.phone || companyConfig.contact.phone;
+    const displayName = window.currentIncident?.assignedUnit?.officer || 'Control Room';
+
+    // Confirm before calling
+    if (confirm(`📞 Call ${displayName}?\n\n${phoneNumber}`)) {
+      window.location.href = `tel:${phoneNumber}`;
+    }
   });
 
   // Incident Report Button
@@ -705,19 +712,56 @@ async function handleEmergencyButton(e) {
 
 // Show Incident Screen
 function showIncidentScreen(type, incidentId) {
-  const emergencyLabels = {
-    panic: '🚨 Armed Response',
-    medical: '🏥 Medical Emergency',
-    fire: '🔥 Fire & Rescue',
-    technical: '🔧 Technical Support'
+  const emergencyConfig = {
+    panic: {
+      label: 'PANIC!!!!',
+      icon: 'images/armed-response.png',
+      color: '#FF3B30'
+    },
+    medical: {
+      label: 'Medical Emergency',
+      icon: 'images/medical.png',
+      color: '#007AFF'
+    },
+    fire: {
+      label: 'Fire & Rescue',
+      icon: 'images/fire-and-rescue.png',
+      color: '#FF9500'
+    },
+    technical: {
+      label: 'Technical Support',
+      icon: 'images/technical.png',
+      color: '#888888'
+    },
+    'family-alert': {
+      label: 'Family Alert',
+      icon: 'images/alert-family.png',
+      color: '#E91E63'
+    }
   };
 
-  document.getElementById('incidentType').textContent = emergencyLabels[type];
+  const config = emergencyConfig[type] || { label: type, icon: '', color: '#666' };
+
+  // Store incident details globally for later use
+  window.currentIncident = { type, incidentId, createdAt: new Date() };
+
+  document.getElementById('incidentType').innerHTML = `
+    <div style="display: flex; align-items: center; justify-content: center; gap: 12px;">
+      ${config.icon ? `<img src="${config.icon}" alt="${config.label}" style="width: 40px; height: 40px;">` : ''}
+      <span style="color: ${config.color};">${config.label}</span>
+    </div>
+  `;
   document.getElementById('incidentId').textContent = incidentId.substr(0, 8).toUpperCase();
   document.getElementById('incidentStatusText').textContent = 'Pending';
-  document.getElementById('incidentTime').textContent = 'Just now';
 
-  showScreen('incident');
+  // Set location message
+  document.getElementById('incidentLocation').textContent = '🔒 Awaiting Security Company Approval';
+
+  // Show actual creation time
+  const now = new Date();
+  document.getElementById('incidentTime').textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  showScreen('incidentScreen');
 
   // Subscribe to incident updates
   const unsubscribe = onSnapshot(doc(db, 'incidents', incidentId), (doc) => {
@@ -773,7 +817,13 @@ function updateIncidentScreen(incident) {
         msg.style.borderRadius = '8px';
         msg.style.fontSize = '0.9rem';
 
-        const time = event.timestamp?.toDate ? event.timestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now';
+        // Fix timestamp - use stored incident creation time if no timestamp
+        let time = 'Just now';
+        if (event.timestamp?.toDate) {
+          time = event.timestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        } else if (window.currentIncident?.createdAt) {
+          time = window.currentIncident.createdAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
 
         if (event.actor === 'client') {
           msg.style.background = '#222';

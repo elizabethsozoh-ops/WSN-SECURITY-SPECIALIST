@@ -613,6 +613,51 @@
 
     </div>
 
+    <!-- Add Notes Modal -->
+    <div id="notesModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10000; justify-content: center; align-items: center;">
+        <div style="background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); border-radius: 16px; padding: 30px; max-width: 500px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.5); border: 1px solid rgba(212,175,55,0.3);">
+            <h2 style="color: var(--color-primary); margin: 0 0 20px 0; text-align: center;">📝 Add Incident Notes</h2>
+
+            <div style="background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.3); border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+                <div style="color: #888; font-size: 0.85rem;">Incident ID:</div>
+                <div id="modalIncidentId" style="color: var(--color-primary); font-family: monospace; font-weight: 700; font-size: 1.1rem;"></div>
+                <div style="color: #888; font-size: 0.85rem; margin-top: 8px;">User:</div>
+                <div id="modalUserEmail" style="color: white; font-size: 0.9rem;"></div>
+            </div>
+
+            <div style="margin-bottom: 15px;">
+                <label style="color: var(--color-primary); font-weight: 600; display: block; margin-bottom: 8px;">Note Category</label>
+                <select id="noteCategory" style="width: 100%; padding: 12px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 8px; font-size: 0.9rem;">
+                    <option value="General">General</option>
+                    <option value="Aggressive Dogs">🐕 Aggressive Dogs</option>
+                    <option value="Client Behavior">👤 Client Behavior (rude, shouting, etc.)</option>
+                    <option value="Elderly/Fragile">👴 Elderly / Fragile</option>
+                    <option value="False Alarm">⚠️ False Alarm</option>
+                    <option value="Animal Control Needed">🦴 Animal Control Called</option>
+                    <option value="Police Assistance">👮 Police Assistance Required</option>
+                    <option value="Medical Notes">🏥 Medical Notes</option>
+                    <option value="Property Issues">🏠 Property Issues</option>
+                    <option value="Response Officer">👨‍✈️ Response Officer Notes</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <label style="color: var(--color-primary); font-weight: 600; display: block; margin-bottom: 8px;">Notes</label>
+                <textarea id="noteContent" placeholder="Enter detailed notes here..." style="width: 100%; height: 120px; padding: 12px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 8px; font-size: 0.9rem; font-family: inherit; resize: vertical;"></textarea>
+            </div>
+
+            <div style="display: flex; gap: 12px;">
+                <button onclick="cancelNotes()" style="flex: 1; padding: 14px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.95rem;">
+                    Cancel
+                </button>
+                <button onclick="saveNotes()" style="flex: 1; padding: 14px; background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%); border: none; color: white; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 0.95rem;">
+                    💾 Save Notes
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Google Maps Functions -->
     <script>
         let map = null;
@@ -1671,10 +1716,12 @@
                         if (notesDoc.exists()) {
                             hasNotes = true;
                             const notesData = notesDoc.data();
+                            const category = notesData.category ? `<div style="background: rgba(59,130,246,0.2); color: #3B82F6; padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; display: inline-block; margin-bottom: 8px;">${notesData.category}</div>` : '';
                             notesContent = `
                                 <div id="notes-${incidentId}" style="display: none; background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.3); border-radius: 8px; padding: 12px; margin-top: 10px;">
                                     <div style="color: #3B82F6; font-weight: 600; margin-bottom: 8px;">📝 INCIDENT NOTES</div>
-                                    <div style="color: #C0C0C0; font-size: 0.9rem; line-height: 1.4; margin-bottom: 8px;">${notesData.notes}</div>
+                                    ${category}
+                                    <div style="color: #C0C0C0; font-size: 0.9rem; line-height: 1.4; margin-bottom: 8px; white-space: pre-wrap;">${notesData.notes}</div>
                                     <div style="color: #666; font-size: 0.75rem;">Added by: ${notesData.addedBy}</div>
                                     <div style="color: #666; font-size: 0.75rem;">${notesData.timestamp?.toDate ? notesData.timestamp.toDate().toLocaleString() : 'N/A'}</div>
                                 </div>
@@ -1927,22 +1974,52 @@ Powered by WSN GROUP`;
 
         // ==================== INCIDENT NOTES & WATCHLIST ====================
 
-        window.addIncidentNotes = async (incidentId, userEmail) => {
-            const notes = prompt(`📝 ADD NOTES FOR INCIDENT ${incidentId.substr(0, 8).toUpperCase()}\n\nUser: ${userEmail}\n\nEnter notes (e.g., "dogs aggressive", "client rude", "elderly - handle with care"):`);
+        let currentIncidentData = {};
 
-            if (!notes || !notes.trim()) return;
+        window.addIncidentNotes = (incidentId, userEmail) => {
+            // Store data for later use
+            currentIncidentData = { incidentId, userEmail };
+
+            // Show modal
+            document.getElementById('modalIncidentId').textContent = incidentId.substr(0, 8).toUpperCase();
+            document.getElementById('modalUserEmail').textContent = userEmail;
+            document.getElementById('noteCategory').value = 'General';
+            document.getElementById('noteContent').value = '';
+            document.getElementById('notesModal').style.display = 'flex';
+        };
+
+        window.cancelNotes = () => {
+            document.getElementById('notesModal').style.display = 'none';
+            currentIncidentData = {};
+        };
+
+        window.saveNotes = async () => {
+            const category = document.getElementById('noteCategory').value;
+            const notes = document.getElementById('noteContent').value;
+
+            if (!notes || !notes.trim()) {
+                alert('⚠️ Please enter notes before saving');
+                return;
+            }
 
             try {
+                const { incidentId, userEmail } = currentIncidentData;
+
                 await setDoc(doc(db, 'incident_notes', incidentId), {
                     incidentId: incidentId,
                     userEmail: userEmail,
+                    category: category,
                     notes: notes.trim(),
                     addedBy: auth.currentUser.email,
                     addedAt: serverTimestamp(),
                     timestamp: new Date()
                 }, { merge: true });
 
-                alert('✅ Notes saved successfully!\n\nNotes: ' + notes);
+                // Close modal
+                document.getElementById('notesModal').style.display = 'none';
+                currentIncidentData = {};
+
+                alert(`✅ Notes saved successfully!\n\nCategory: ${category}\nNotes: ${notes}`);
 
                 // Reload archive if on archive tab to show updated notes
                 if (document.getElementById('archiveContent').style.display !== 'none') {

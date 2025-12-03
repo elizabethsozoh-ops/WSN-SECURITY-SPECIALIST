@@ -761,7 +761,7 @@ function showIncidentScreen(type, incidentId) {
   const now = new Date();
   document.getElementById('incidentTime').textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-  showScreen('incidentScreen');
+  showScreen('incident');
 
   // Subscribe to incident updates
   const unsubscribe = onSnapshot(doc(db, 'incidents', incidentId), (doc) => {

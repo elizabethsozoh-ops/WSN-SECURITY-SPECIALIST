@@ -1600,7 +1600,7 @@
                     const type = incident.type || 'unknown';
                     const user = incident.userEmail || 'Unknown';
                     const resolution = incident.resolution || 'N/A';
-                    const address = incident.address || incident.location || 'No address recorded';
+                    const address = incident.location?.address || 'No address recorded';
 
                     card.innerHTML = `
                         <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">

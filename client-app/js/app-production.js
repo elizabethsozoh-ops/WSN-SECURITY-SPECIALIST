@@ -43,10 +43,10 @@ const companyConfig = {
     secondary: "#C0C0C0"
   },
   contact: {
-    phone: "+27112345678",  // South Africa format (replace with real number)
-    phoneDisplay: "011 234 5678",  // Display format
-    emergency24h: "+27112345678",  // 24/7 Emergency line
-    whatsapp: "+27112345678",  // WhatsApp number (same or different)
+    phone: "+27765206800",  // South Africa format
+    phoneDisplay: "076 520 6800",  // Display format
+    emergency24h: "+27765206800",  // 24/7 Emergency line
+    whatsapp: "+27765206800",  // WhatsApp number
     email: "control@abcsecurity.co.za"
   },
   // Geofence Configuration - Security Coverage Area

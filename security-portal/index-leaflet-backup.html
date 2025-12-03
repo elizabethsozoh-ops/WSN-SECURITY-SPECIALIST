@@ -13,8 +13,12 @@
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap"
         rel="stylesheet">
 
-    <!-- Google Maps API (includes Maps, Street View, Markers, etc.) -->
-    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDLngMe7nNiCR4ZzQm9LfcxnnJwYvRnaNI&libraries=marker&callback=initGoogleMaps"></script>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+
+    <!-- Google Maps API for Street View -->
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDLngMe7nNiCR4ZzQm9LfcxnnJwYvRnaNI&callback=initGoogleMaps"></script>
 
     <style>
         :root {
@@ -433,10 +437,10 @@
             📊 ANALYTICS & REPORTS
         </button>
 
-        <!-- STREET VIEW BUTTON - Quick access to Street View at HQ -->
+        <!-- TEST STREET VIEW BUTTON - Quick access to test Street View at HQ -->
         <button onclick="openStreetView(-26.081096, 28.238763)"
-            style="position: fixed; bottom: 90px; right: 30px; z-index: 1000; background: linear-gradient(135deg, #007AFF 0%, #0056B3 100%); color: white; border: none; padding: 10px 18px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.85rem; pointer-events: auto; box-shadow: 0 4px 15px rgba(0,122,255,0.3);">
-            📍 Street View
+            style="position: fixed; bottom: 90px; right: 30px; z-index: 1000; background: linear-gradient(135deg, #007AFF 0%, #0056B3 100%); color: white; border: none; padding: 15px 25px; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 1rem; pointer-events: auto; box-shadow: 0 4px 20px rgba(0,122,255,0.3);">
+            📍 TEST STREET VIEW
         </button>
     </div>
 
@@ -568,159 +572,20 @@
 
     </div>
 
-    <!-- Google Maps Functions -->
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+    <!-- Google Maps Street View Functions -->
     <script>
-        let map = null;
         let streetViewPanorama = null;
         let googleMapsLoaded = false;
-        let markers = {};
-        let geofenceCircle = null;
-        let hqMarker = null;
 
         // Initialize Google Maps when API loads
         window.initGoogleMaps = function() {
-            console.log('✅ Google Maps API loaded');
+            console.log('✅ Google Maps API loaded for Street View');
             googleMapsLoaded = true;
-            // Map will be initialized after Firebase auth in the main script
         };
-
-        // Initialize the main map
-        function initMap() {
-            if (!googleMapsLoaded) {
-                console.warn('⚠️ Google Maps API not loaded yet');
-                return;
-            }
-
-            const mapDiv = document.getElementById('map');
-
-            // Create Google Map centered on Kempton Park
-            map = new google.maps.Map(mapDiv, {
-                center: { lat: -26.1000, lng: 28.2300 },
-                zoom: 13,
-                mapTypeId: 'roadmap',
-                mapTypeControl: true,
-                mapTypeControlOptions: {
-                    style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
-                    position: google.maps.ControlPosition.TOP_RIGHT,
-                    mapTypeIds: ['roadmap', 'satellite', 'hybrid', 'terrain']
-                },
-                zoomControl: true,
-                zoomControlOptions: {
-                    position: google.maps.ControlPosition.RIGHT_TOP
-                },
-                streetViewControl: false,
-                fullscreenControl: true,
-                styles: [
-                    {
-                        "elementType": "geometry",
-                        "stylers": [{ "color": "#212121" }]
-                    },
-                    {
-                        "elementType": "labels.icon",
-                        "stylers": [{ "visibility": "off" }]
-                    },
-                    {
-                        "elementType": "labels.text.fill",
-                        "stylers": [{ "color": "#757575" }]
-                    },
-                    {
-                        "elementType": "labels.text.stroke",
-                        "stylers": [{ "color": "#212121" }]
-                    },
-                    {
-                        "featureType": "administrative",
-                        "elementType": "geometry",
-                        "stylers": [{ "color": "#757575" }]
-                    },
-                    {
-                        "featureType": "road",
-                        "elementType": "geometry",
-                        "stylers": [{ "color": "#2c2c2c" }]
-                    },
-                    {
-                        "featureType": "water",
-                        "elementType": "geometry",
-                        "stylers": [{ "color": "#000000" }]
-                    }
-                ]
-            });
-
-            // Add geofence visualization
-            addGeofenceVisualization();
-
-            console.log('✅ Google Map initialized');
-        }
-
-        // Add geofence circle and HQ marker
-        function addGeofenceVisualization() {
-            const geofenceConfig = {
-                center: { lat: -26.081096, lng: 28.238763 },
-                radiusKm: 25,
-                coverageArea: "Kempton Park, Johannesburg, Edenvale, Boksburg, Benoni"
-            };
-
-            // Draw geofence circle
-            geofenceCircle = new google.maps.Circle({
-                strokeColor: '#34C759',
-                strokeOpacity: 0.8,
-                strokeWeight: 2,
-                fillColor: '#34C759',
-                fillOpacity: 0.1,
-                map: map,
-                center: geofenceConfig.center,
-                radius: geofenceConfig.radiusKm * 1000 // Convert km to meters
-            });
-
-            // Add HQ marker
-            const hqIcon = {
-                path: google.maps.SymbolPath.CIRCLE,
-                scale: 16,
-                fillColor: '#D4AF37',
-                fillOpacity: 1,
-                strokeColor: '#ffffff',
-                strokeWeight: 3
-            };
-
-            hqMarker = new google.maps.Marker({
-                position: geofenceConfig.center,
-                map: map,
-                icon: hqIcon,
-                title: 'ABC Security HQ',
-                label: {
-                    text: '🏢',
-                    fontSize: '18px'
-                }
-            });
-
-            const hqInfoWindow = new google.maps.InfoWindow({
-                content: `
-                    <div style="font-family: 'Inter'; text-align: center; color: #000;">
-                        <strong style="color: #D4AF37; font-size: 1.1em;">🏢 CONTROL ROOM HQ</strong><br>
-                        <span style="color: #666;">ABC SECURITY</span><br>
-                        <span style="font-size: 0.85em; color: #888;">Kempton Park, Gauteng</span><br>
-                        <span style="font-size: 0.75em; color: #34C759;">Coverage: ${geofenceConfig.radiusKm}km radius</span><br>
-                        <button onclick="openStreetView(${geofenceConfig.center.lat}, ${geofenceConfig.center.lng})" style="
-                            margin-top: 8px;
-                            padding: 8px 16px;
-                            background: linear-gradient(135deg, #D4AF37 0%, #B8941F 100%);
-                            color: #000;
-                            border: none;
-                            border-radius: 6px;
-                            cursor: pointer;
-                            font-weight: 600;
-                            font-size: 0.875rem;
-                            box-shadow: 0 2px 8px rgba(212,175,55,0.3);
-                        ">
-                            📍 Street View
-                        </button>
-                    </div>
-                `
-            });
-
-            hqMarker.addListener('click', () => {
-                hqInfoWindow.open(map, hqMarker);
-            });
-        }
 
         // Open Street View at specific location
         function openStreetView(lat, lng, heading = 0) {
@@ -773,8 +638,105 @@
             appId: "1:867816848580:web:a356aa5d456d287feb9d91"
         };
 
-        // Initialize Google Maps
-        initMap();
+        // Initialize Map - Centered on Kempton Park, South Africa
+        const map = L.map('map', {
+            zoomControl: false,
+            maxZoom: 18
+        }).setView([-26.1000, 28.2300], 13); // Kempton Park center with wider view
+
+        L.control.zoom({ position: 'topright' }).addTo(map);
+
+        // Map Layers
+        const lightLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap &copy; CARTO',
+            subdomains: 'abcd',
+            maxZoom: 18
+        });
+
+        const darkLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap &copy; CARTO',
+            subdomains: 'abcd',
+            maxZoom: 18
+        });
+
+        const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+            maxZoom: 18
+        });
+
+        // Add default layer
+        darkLayer.addTo(map);
+
+        // Layer Control
+        const baseMaps = {
+            "Dark Mode": darkLayer,
+            "Light Mode": lightLayer,
+            "Satellite": satelliteLayer
+        };
+
+        L.control.layers(baseMaps, null, { position: 'topright' }).addTo(map);
+
+        // ==================== GEOFENCE VISUALIZATION ====================
+        // Company geofence configuration (matches client-app config)
+        const geofenceConfig = {
+            center: [-26.081096, 28.238763],  // ABC Security HQ - Kempton Park
+            radiusKm: 25,  // 25km coverage radius
+            coverageArea: "Kempton Park, Johannesburg, Edenvale, Boksburg, Benoni"
+        };
+
+        // Draw geofence circle on map
+        const geofenceCircle = L.circle(geofenceConfig.center, {
+            radius: geofenceConfig.radiusKm * 1000,  // Convert km to meters
+            color: '#34C759',  // Green border
+            fillColor: '#34C759',
+            fillOpacity: 0.1,
+            weight: 2,
+            dashArray: '10, 10'  // Dashed line
+        }).addTo(map);
+
+        geofenceCircle.bindPopup(`
+            <div style="font-family: 'Inter'; text-align: center;">
+                <strong style="color: #34C759; font-size: 1.1em;">✅ COVERAGE AREA</strong><br>
+                <span style="color: #666; font-size: 0.9em;">ABC SECURITY</span><br>
+                <span style="font-size: 0.85em; color: #888;">Radius: ${geofenceConfig.radiusKm}km</span><br>
+                <span style="font-size: 0.75em; color: #aaa;">${geofenceConfig.coverageArea}</span>
+            </div>
+        `);
+
+        // Add HQ marker
+        const hqIcon = L.divIcon({
+            html: `<div style="background: #D4AF37; width: 32px; height: 32px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 20px rgba(212,175,55,0.8); display: flex; align-items: center; justify-content: center; color: #000; font-size: 16px; font-weight: bold;">🏢</div>`,
+            className: '',
+            iconSize: [32, 32],
+            iconAnchor: [16, 16]
+        });
+
+        const hqMarker = L.marker(geofenceConfig.center, { icon: hqIcon }).addTo(map);
+        hqMarker.bindPopup(`
+            <div style="font-family: 'Inter'; text-align: center;">
+                <strong style="color: #D4AF37; font-size: 1.1em;">🏢 CONTROL ROOM HQ</strong><br>
+                <span style="color: #666;">ABC SECURITY</span><br>
+                <span style="font-size: 0.85em; color: #888;">Kempton Park, Gauteng</span><br>
+                <span style="font-size: 0.75em; color: #34C759;">Coverage: ${geofenceConfig.radiusKm}km radius</span><br>
+                <button onclick="openStreetView(${geofenceConfig.center[0]}, ${geofenceConfig.center[1]})" style="
+                    margin-top: 8px;
+                    padding: 8px 16px;
+                    background: linear-gradient(135deg, #D4AF37 0%, #B8941F 100%);
+                    color: #000;
+                    border: none;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    font-weight: 600;
+                    font-size: 0.875rem;
+                    box-shadow: 0 2px 8px rgba(212,175,55,0.3);
+                ">
+                    📍 Street View
+                </button>
+            </div>
+        `);
+        // ==================== END GEOFENCE VISUALIZATION ====================
+
+        const markers = {};
 
         // AUDIO ALERT SYSTEM
         let audioContext = null;
@@ -1160,53 +1122,38 @@
             if (incident.location?.coordinates) {
                 const { lat, lng } = incident.location.coordinates;
 
-                // Create Google Maps marker with pulse animation
-                const marker = new google.maps.Marker({
-                    position: { lat, lng },
-                    map: map,
-                    icon: {
-                        path: google.maps.SymbolPath.CIRCLE,
-                        scale: 12,
-                        fillColor: typeColor,
-                        fillOpacity: 1,
-                        strokeColor: '#ffffff',
-                        strokeWeight: 3
-                    },
-                    title: typeLabel,
-                    animation: google.maps.Animation.DROP
+                const pulseIcon = L.divIcon({
+                    className: 'custom-marker',
+                    html: `<div class="pulse-ring" style="background: ${typeColor}; box-shadow: 0 0 0 ${typeColor}; border-color: white;"></div>`,
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
                 });
 
-                const infoWindow = new google.maps.InfoWindow({
-                    content: `
-                        <div style="font-family: 'Inter'; text-align: center; color: #000;">
-                            <strong style="color: ${typeColor}; font-size: 1.1em;">${typeLabel}</strong><br>
-                            ${incident.userProfile?.firstName}<br>
-                            <small>${timeStr}</small><br>
-                            <button onclick="openStreetView(${lat}, ${lng})" style="
-                                margin-top: 8px;
-                                padding: 8px 16px;
-                                background: linear-gradient(135deg, #007AFF 0%, #0056B3 100%);
-                                color: white;
-                                border: none;
-                                border-radius: 6px;
-                                cursor: pointer;
-                                font-weight: 600;
-                                font-size: 0.875rem;
-                                box-shadow: 0 2px 8px rgba(0,122,255,0.3);
-                            ">
-                                📍 Street View
-                            </button>
-                        </div>
-                    `
-                });
+                const marker = L.marker([lat, lng], { icon: pulseIcon }).addTo(map);
+                marker.bindPopup(`
+                    <div style="font-family: 'Inter'; text-align: center;">
+                        <strong style="color: ${typeColor}; font-size: 1.1em;">${typeLabel}</strong><br>
+                        ${incident.userProfile?.firstName}<br>
+                        <small>${timeStr}</small><br>
+                        <button onclick="openStreetView(${lat}, ${lng})" style="
+                            margin-top: 8px;
+                            padding: 8px 16px;
+                            background: linear-gradient(135deg, #007AFF 0%, #0056B3 100%);
+                            color: white;
+                            border: none;
+                            border-radius: 6px;
+                            cursor: pointer;
+                            font-weight: 600;
+                            font-size: 0.875rem;
+                            box-shadow: 0 2px 8px rgba(0,122,255,0.3);
+                        ">
+                            📍 Street View
+                        </button>
+                    </div>
+                `);
 
-                marker.addListener('click', () => {
-                    infoWindow.open(map, marker);
-                });
-
-                markers[incident.id] = { marker, lat, lng, infoWindow };
-                map.panTo({ lat, lng });
-                map.setZoom(17);
+                markers[incident.id] = { marker, lat, lng };
+                map.flyTo([lat, lng], 17, { duration: 2 });
             }
         }
 
@@ -1223,17 +1170,16 @@
             if (card) card.remove();
 
             if (markers[id]) {
-                markers[id].marker.setMap(null); // Remove marker from Google Map
+                map.removeLayer(markers[id].marker);
                 delete markers[id];
             }
         }
 
         window.focusIncident = (id) => {
             if (markers[id]) {
-                const { lat, lng, marker, infoWindow } = markers[id];
-                map.panTo({ lat, lng });
-                map.setZoom(18);
-                infoWindow.open(map, marker);
+                const { lat, lng } = markers[id];
+                map.flyTo([lat, lng], 18, { duration: 1.5 });
+                markers[id].marker.openPopup();
 
                 document.querySelectorAll('.incident-card').forEach(c => c.classList.remove('active'));
                 document.getElementById(`card-${id}`)?.classList.add('active');
@@ -1720,7 +1666,6 @@
 
                         // Add to active trackers list
                         activeTrackers.push({
-                            userId: userId,
                             email: userData.liveLocation.userEmail || 'Unknown',
                             account: userData.liveLocation.accountNumber || 'Not Linked',
                             address: userData.liveLocation.address || 'No address'
@@ -1729,11 +1674,11 @@
                         // Remove marker if user stopped sharing
                         if (liveLocationMarkers[userId]) {
                             console.log('🛑 User stopped sharing:', userId);
-                            liveLocationMarkers[userId].marker.setMap(null);
+                            map.removeLayer(liveLocationMarkers[userId]);
                             delete liveLocationMarkers[userId];
                         }
                         if (locationTrails[userId]) {
-                            locationTrails[userId].polyline.setMap(null);
+                            map.removeLayer(locationTrails[userId]);
                             delete locationTrails[userId];
                         }
                     }
@@ -1759,48 +1704,6 @@
             });
         }
 
-        // Acknowledge live location tracking
-        window.acknowledgeLiveLocation = async function(userId) {
-            try {
-                const userRef = doc(db, 'users', userId);
-                const userDoc = await getDoc(userRef);
-
-                if (!userDoc.exists()) {
-                    console.error('User not found:', userId);
-                    alert('❌ User not found');
-                    return;
-                }
-
-                const userData = userDoc.data();
-
-                // Update user document with acknowledgment
-                await setDoc(userRef, {
-                    liveLocation: {
-                        ...userData.liveLocation,
-                        acknowledged: true,
-                        acknowledgedAt: new Date(),
-                        acknowledgedBy: auth.currentUser.email,
-                        controlRoomMessage: `✅ Control room is now monitoring your location. You are safe.`
-                    }
-                }, { merge: true });
-
-                // Stop alert AFTER successful acknowledgment
-                stopContinuousAlert();
-
-                console.log('✅ Live location acknowledged for user:', userId);
-                alert(`✅ Live location acknowledged!\n\nUser will be notified that control room is monitoring.`);
-
-            } catch (error) {
-                console.error('❌ Error acknowledging live location:', error);
-                console.error('Error details:', error.message, error.stack);
-
-                // Restart alert since acknowledgment failed
-                startContinuousAlert('live-location');
-
-                alert(`❌ Failed to acknowledge live location\n\n${error.message}`);
-            }
-        };
-
         function updateLiveTrackingPanel(activeTrackers) {
             const panel = document.getElementById('liveTrackingPanel');
             const list = document.getElementById('liveTrackingList');
@@ -1817,13 +1720,6 @@
                     <div style="color: #34C759; font-weight: 600;">📱 ${tracker.email}</div>
                     <div style="font-size: 0.75rem; color: var(--color-primary);">Account: ${tracker.account}</div>
                     <div style="font-size: 0.75rem; color: #888; margin-top: 2px;">${tracker.address}</div>
-                    <button onclick="acknowledgeLiveLocation('${tracker.userId}')" style="
-                        margin-top: 6px; width: 100%; padding: 6px;
-                        background: linear-gradient(135deg, #34C759 0%, #28A745 100%);
-                        color: white; border: none; border-radius: 4px;
-                        cursor: pointer; font-weight: 600; font-size: 0.7rem;">
-                        ✓ ACKNOWLEDGE
-                    </button>
                 </div>
             `).join('');
         }
@@ -1844,60 +1740,43 @@
             const isNewMarker = !liveLocationMarkers[userId];
             if (liveLocationMarkers[userId]) {
                 console.log('🔄 Updating existing marker');
-                liveLocationMarkers[userId].marker.setPosition({ lat, lng });
+                liveLocationMarkers[userId].setLatLng([lat, lng]);
             } else {
                 console.log('✨ Creating new marker - NEW USER STARTED SHARING LOCATION');
+                const liveIcon = L.divIcon({
+                    html: `<div style="background: #007AFF; width: 24px; height: 24px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 20px rgba(0,122,255,0.8); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 12px; animation: pulse 2s infinite;">📍</div>`,
+                    className: '',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+
+                const marker = L.marker([lat, lng], { icon: liveIcon }).addTo(map);
 
                 // Get account number for initial popup
                 const initAccountNumber = userData.liveLocation.accountNumber || userData.accountNumber || 'Not Linked';
                 const initAccountColor = initAccountNumber === 'Not Linked' ? '#FF9500' : '#34C759';
                 const initAccountInfo = `<div style="background: rgba(212,175,55,0.2); padding: 4px 8px; border-radius: 4px; margin: 4px 0;"><span style="color: ${initAccountColor}; font-weight: 700; font-size: 0.9em;">Account: ${initAccountNumber}</span></div>`;
 
-                const marker = new google.maps.Marker({
-                    position: { lat, lng },
-                    map: map,
-                    icon: {
-                        path: google.maps.SymbolPath.CIRCLE,
-                        scale: 12,
-                        fillColor: '#007AFF',
-                        fillOpacity: 1,
-                        strokeColor: '#ffffff',
-                        strokeWeight: 3
-                    },
-                    title: 'Live Location Tracking',
-                    label: {
-                        text: '📍',
-                        fontSize: '16px',
-                        color: '#ffffff'
-                    }
-                });
+                marker.bindPopup(`
+                    <div style="font-family: 'Inter'; text-align: center;">
+                        <strong style="color: #007AFF; font-size: 1.1em;">🔴 LIVE LOCATION</strong><br>
+                        ${initAccountInfo}
+                        <span style="color: #666;">${userData.liveLocation.userEmail || 'Unknown User'}</span><br>
+                        <span style="font-size: 0.85em; color: #888;">${userData.liveLocation.address || 'No address'}</span><br>
+                        <span style="font-size: 0.75em; color: #aaa;">Updated: ${userData.liveLocation.timestamp?.toDate ? userData.liveLocation.timestamp.toDate().toLocaleTimeString() : 'Just now'}</span>
+                    </div>
+                `);
 
-                const infoWindow = new google.maps.InfoWindow({
-                    content: `
-                        <div style="font-family: 'Inter'; text-align: center; color: #000;">
-                            <strong style="color: #007AFF; font-size: 1.1em;">🔴 LIVE LOCATION</strong><br>
-                            ${initAccountInfo}
-                            <span style="color: #666;">${userData.liveLocation.userEmail || 'Unknown User'}</span><br>
-                            <span style="font-size: 0.85em; color: #888;">${userData.liveLocation.address || 'No address'}</span><br>
-                            <span style="font-size: 0.75em; color: #aaa;">Updated: ${userData.liveLocation.timestamp?.toDate ? userData.liveLocation.timestamp.toDate().toLocaleTimeString() : 'Just now'}</span>
-                        </div>
-                    `
-                });
-
-                marker.addListener('click', () => {
-                    infoWindow.open(map, marker);
-                });
-
-                liveLocationMarkers[userId] = { marker, infoWindow };
+                liveLocationMarkers[userId] = marker;
                 console.log('✅ Marker created successfully for account:', initAccountNumber);
 
-                // Play CONTINUOUS notification sound for NEW location sharing
+                // Play notification sound for NEW location sharing
                 try {
                     if (!audioContext) {
                         initAudioSystem();
                     }
-                    startContinuousAlert('live-location');
-                    console.log('🔊 CONTINUOUS BEEP STARTED');
+                    playIncidentReportBeep();
+                    console.log('🔊 BEEP SOUND PLAYED');
                 } catch (error) {
                     console.warn('❌ Could not play sound:', error);
                 }
@@ -1913,7 +1792,7 @@
             const accountColor = accountNumber === 'Not Linked' ? '#FF9500' : '#34C759';
             const accountInfo = `<div style="background: rgba(212,175,55,0.2); padding: 4px 8px; border-radius: 4px; margin: 4px 0;"><span style="color: ${accountColor}; font-weight: 700; font-size: 0.9em;">Account: ${accountNumber}</span></div>`;
 
-            liveLocationMarkers[userId].infoWindow.setContent(`
+            liveLocationMarkers[userId].setPopupContent(`
                 <div style="font-family: 'Inter'; text-align: center;">
                     <strong style="color: #007AFF; font-size: 1.1em;">🔴 LIVE LOCATION</strong><br>
                     ${accountInfo}
@@ -1937,7 +1816,7 @@
                 };
             }
 
-            locationTrails[userId].points.push({ lat, lng });
+            locationTrails[userId].points.push([lat, lng]);
 
             // Only keep last 50 points to avoid performance issues
             if (locationTrails[userId].points.length > 50) {
@@ -1946,17 +1825,15 @@
 
             // Update or create polyline
             if (locationTrails[userId].polyline) {
-                locationTrails[userId].polyline.setMap(null);
+                map.removeLayer(locationTrails[userId].polyline);
             }
 
-            locationTrails[userId].polyline = new google.maps.Polyline({
-                path: locationTrails[userId].points,
-                geodesic: true,
-                strokeColor: '#007AFF',
-                strokeOpacity: 0.6,
-                strokeWeight: 3,
-                map: map
-            });
+            locationTrails[userId].polyline = L.polyline(locationTrails[userId].points, {
+                color: '#007AFF',
+                weight: 3,
+                opacity: 0.6,
+                dashArray: '10, 5'
+            }).addTo(map);
         }
 
         // Start live location tracking when page loads

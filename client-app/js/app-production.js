@@ -1463,7 +1463,8 @@ function createHistoryCard(incident) {
     'medical': { label: '🏥 MEDICAL ASSISTANCE', color: '#007AFF' },
     'fire': { label: '🔥 FIRE & RESCUE', color: '#FF9500' },
     'technical': { label: '🔧 TECHNICAL DEPARTMENT', color: '#888' },
-    'incident-report': { label: '📋 INCIDENT REPORT', color: '#9B59B6' }
+    'incident-report': { label: '📋 INCIDENT REPORT', color: '#9B59B6' },
+    'family-alert': { label: '👨‍👩‍👧‍👦 FAMILY ALERT', color: '#E91E63' }
   };
 
   const config = typeConfig[incident.type] || { label: incident.type, color: '#666' };
@@ -1633,7 +1634,8 @@ async function alertMyFamily() {
   try {
     // Load emergency contacts first
     const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
-    const contacts = userDoc.exists() ? (userDoc.data().emergencyContacts || []) : [];
+    const userData = userDoc.data() || {};
+    const contacts = userData.emergencyContacts || [];
 
     if (contacts.length === 0) {
       if (confirm('No emergency contacts found.\n\nWould you like to add some now?')) {
@@ -1643,7 +1645,7 @@ async function alertMyFamily() {
       return;
     }
 
-    if (!confirm(`⚠️ ALERT MY FAMILY\n\nThis will send SMS alerts to ${contacts.length} emergency contact(s):\n${contacts.map(c => `• ${c.name}`).join('\n')}\n\nContinue?`)) {
+    if (!confirm(`⚠️ ALERT MY FAMILY\n\nThis will open your SMS app to send emergency alerts to ${contacts.length} contact(s):\n${contacts.map(c => `• ${c.name} (${c.phone})`).join('\n')}\n\nYou'll need to manually send each SMS.\n\nContinue?`)) {
       return;
     }
 
@@ -1653,13 +1655,34 @@ async function alertMyFamily() {
     const location = await getCurrentLocation();
     const address = await reverseGeocodeLocation(location.latitude, location.longitude);
 
-    // Create family alert incident
-    const familyAlert = {
+    // Get user profile data
+    const userProfile = {
+      firstName: userData.firstName || 'User',
+      lastName: userData.lastName || '',
+      accountNumber: userData.accountNumber || 'Not Linked'
+    };
+
+    // Create emergency message
+    const emergencyMessage = `🚨 EMERGENCY ALERT 🚨
+
+${userProfile.firstName} ${userProfile.lastName} needs help!
+
+Account: ${userProfile.accountNumber}
+Location: ${address}
+GPS: https://maps.google.com/?q=${location.latitude},${location.longitude}
+
+Time: ${new Date().toLocaleString()}
+
+Please contact them immediately or call emergency services!`;
+
+    // Create incident in Control Room (same as panic button)
+    const incident = {
       type: 'family-alert',
       status: 'pending',
       priority: 'high',
       userId: currentUser.uid,
       userEmail: currentUser.email,
+      userProfile: userProfile,
       emergencyContacts: contacts,
       location: {
         coordinates: {
@@ -1670,20 +1693,51 @@ async function alertMyFamily() {
         address: address,
         timestamp: serverTimestamp()
       },
-      message: `EMERGENCY ALERT: ${currentUser.email} has activated Family Alert`,
+      message: `Family Alert activated by ${userProfile.firstName} ${userProfile.lastName}`,
       createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
+      updatedAt: serverTimestamp(),
+      timeline: [
+        {
+          timestamp: new Date(),
+          action: 'family_alert_triggered',
+          actor: 'user',
+          note: `${contacts.length} emergency contacts to be notified`
+        }
+      ]
     };
 
-    await addDoc(collection(db, 'familyAlerts'), familyAlert);
+    // Add to incidents collection (so Control Room sees it)
+    await addDoc(collection(db, 'incidents'), incident);
 
     hideLoading();
-    alert(`✓ Family Alert Sent!\n\nYour emergency contacts have been notified:\n${contacts.map(c => `• ${c.name} (${c.phone})`).join('\n')}\n\nControl Room has also been alerted.`);
+
+    // Open SMS app for each contact
+    let sentCount = 0;
+    for (let i = 0; i < contacts.length; i++) {
+      const contact = contacts[i];
+      const phoneNumber = contact.phone.replace(/[^0-9+]/g, ''); // Clean phone number
+
+      // Show dialog asking if user wants to send SMS to this contact
+      const shouldSend = confirm(`📱 Send SMS to:\n\n${contact.name}\n${contact.phone}\n\n${i + 1} of ${contacts.length}\n\nClick OK to open SMS app`);
+
+      if (shouldSend) {
+        // Open SMS app with pre-filled message
+        const smsUrl = `sms:${phoneNumber}?body=${encodeURIComponent(emergencyMessage)}`;
+        window.location.href = smsUrl;
+        sentCount++;
+
+        // Wait a moment before next contact (to avoid overlapping SMS apps)
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+    }
+
+    // Show final confirmation
+    alert(`✅ Family Alert Complete!\n\n• Opened SMS app for ${sentCount} contact(s)\n• Control Room has been alerted\n• Incident created with your location\n\nMake sure to send each SMS!`);
 
   } catch (error) {
     hideLoading();
     console.error('Error sending family alert:', error);
-    alert('Error sending family alert. Please call your contacts manually.');
+    alert('❌ Error creating family alert.\n\nPlease call your emergency contacts manually.');
   }
 }
 
@@ -1725,12 +1779,17 @@ async function toggleLiveLocation() {
       locationInterval = null;
     }
 
-    // Update Firebase
+    // Update Firebase - clear all live location data
     try {
       await setDoc(doc(db, 'users', currentUser.uid), {
         liveLocation: {
           active: false,
-          stoppedAt: serverTimestamp()
+          stoppedAt: serverTimestamp(),
+          acknowledged: false,
+          notificationShown: false,
+          acknowledgedAt: null,
+          acknowledgedBy: null,
+          controlRoomMessage: null
         }
       }, { merge: true });
     } catch (error) {
@@ -1751,9 +1810,83 @@ async function toggleLiveLocation() {
     // Then share every 30 seconds
     locationInterval = setInterval(shareLocationNow, 30000);
 
+    // Listen for control room acknowledgment
+    startControlRoomAcknowledgmentListener();
+
     alert('✓ Location sharing started\n\nControl Room can now track your movement in real-time.');
     loadLocationStatus();
   }
+}
+
+// Listen for control room acknowledgment of live location
+function startControlRoomAcknowledgmentListener() {
+  if (!currentUser) return;
+
+  const userRef = doc(db, 'users', currentUser.uid);
+
+  onSnapshot(userRef, (docSnapshot) => {
+    if (!docSnapshot.exists()) return;
+
+    const userData = docSnapshot.data();
+
+    if (userData.liveLocation?.acknowledged && !userData.liveLocation?.notificationShown) {
+      // Show notification to user
+      const message = userData.liveLocation.controlRoomMessage || '✅ Control room is now monitoring your location. You are safe.';
+
+      // Create a professional notification dialog
+      const notification = document.createElement('div');
+      notification.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: linear-gradient(135deg, rgba(52,199,89,0.95) 0%, rgba(40,167,69,0.95) 100%);
+        border: 2px solid #34C759;
+        border-radius: 16px;
+        padding: 30px;
+        z-index: 10000;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        text-align: center;
+        max-width: 350px;
+        animation: slideDown 0.3s ease-out;
+      `;
+
+      notification.innerHTML = `
+        <div style="font-size: 3rem; margin-bottom: 10px;">👁️</div>
+        <div style="color: white; font-weight: 700; font-size: 1.2rem; margin-bottom: 10px;">
+          CONTROL ROOM MONITORING
+        </div>
+        <div style="color: rgba(255,255,255,0.95); font-size: 0.95rem; line-height: 1.5; margin-bottom: 20px;">
+          ${message}
+        </div>
+        <button onclick="this.parentElement.remove()" style="
+          background: white;
+          color: #34C759;
+          border: none;
+          padding: 12px 30px;
+          border-radius: 8px;
+          cursor: pointer;
+          font-weight: 700;
+          font-size: 1rem;
+          box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        ">
+          OK, I FEEL SAFE
+        </button>
+      `;
+
+      document.body.appendChild(notification);
+
+      // Mark notification as shown
+      setDoc(userRef, {
+        liveLocation: {
+          ...userData.liveLocation,
+          notificationShown: true
+        }
+      }, { merge: true });
+
+      console.log('✅ Control room acknowledgment received:', message);
+    }
+  });
 }
 
 async function shareLocationNow() {

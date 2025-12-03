@@ -17,6 +17,9 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
 
+    <!-- Google Maps API for Street View -->
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDLngMe7nNiCR4ZzQm9LfcxnnJwYvRnaNI&callback=initGoogleMaps"></script>
+
     <style>
         :root {
             --color-bg: #0a0a0a;
@@ -366,6 +369,28 @@
     <!-- Map Background -->
     <div id="map"></div>
 
+    <!-- Street View Panel -->
+    <div id="streetViewPanel" style="
+        position: fixed;
+        bottom: 20px;
+        left: 20px;
+        width: 500px;
+        height: 350px;
+        background: rgba(20,20,20,0.95);
+        border: 2px solid var(--color-primary);
+        border-radius: 12px;
+        z-index: 1001;
+        display: none;
+        overflow: hidden;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+    ">
+        <div style="background: linear-gradient(135deg, rgba(212,175,55,0.3) 0%, rgba(192,192,192,0.2) 100%); padding: 12px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--color-primary);">
+            <div style="color: var(--color-primary); font-weight: 700; font-size: 1rem;">📍 Street View</div>
+            <button onclick="closeStreetView()" style="background: rgba(255,59,48,0.2); color: #FF3B30; border: 1px solid #FF3B30; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.875rem;">✕ Close</button>
+        </div>
+        <div id="streetView" style="width: 100%; height: calc(100% - 50px);"></div>
+    </div>
+
     <!-- UI Layer -->
     <div class="ui-layer">
         <div class="sidebar">
@@ -545,6 +570,52 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
+    <!-- Google Maps Street View Functions -->
+    <script>
+        let streetViewPanorama = null;
+        let googleMapsLoaded = false;
+
+        // Initialize Google Maps when API loads
+        window.initGoogleMaps = function() {
+            console.log('✅ Google Maps API loaded for Street View');
+            googleMapsLoaded = true;
+        };
+
+        // Open Street View at specific location
+        function openStreetView(lat, lng, heading = 0) {
+            if (!googleMapsLoaded) {
+                alert('⚠️ Google Maps is still loading...\n\nPlease try again in a moment.');
+                return;
+            }
+
+            const panel = document.getElementById('streetViewPanel');
+            const streetViewDiv = document.getElementById('streetView');
+
+            panel.style.display = 'block';
+
+            // Create Street View panorama
+            streetViewPanorama = new google.maps.StreetViewPanorama(streetViewDiv, {
+                position: { lat: lat, lng: lng },
+                pov: { heading: heading, pitch: 0 },
+                zoom: 1,
+                addressControl: false,
+                fullscreenControl: true,
+                motionTracking: false,
+                motionTrackingControl: false
+            });
+
+            console.log(`📍 Street View opened at: ${lat}, ${lng}`);
+        }
+
+        // Close Street View panel
+        function closeStreetView() {
+            document.getElementById('streetViewPanel').style.display = 'none';
+            if (streetViewPanorama) {
+                streetViewPanorama = null;
+            }
+        }
+    </script>
+
     <!-- Firebase Logic -->
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
@@ -640,7 +711,21 @@
                 <strong style="color: #D4AF37; font-size: 1.1em;">🏢 CONTROL ROOM HQ</strong><br>
                 <span style="color: #666;">ABC SECURITY</span><br>
                 <span style="font-size: 0.85em; color: #888;">Kempton Park, Gauteng</span><br>
-                <span style="font-size: 0.75em; color: #34C759;">Coverage: ${geofenceConfig.radiusKm}km radius</span>
+                <span style="font-size: 0.75em; color: #34C759;">Coverage: ${geofenceConfig.radiusKm}km radius</span><br>
+                <button onclick="openStreetView(${geofenceConfig.center[0]}, ${geofenceConfig.center[1]})" style="
+                    margin-top: 8px;
+                    padding: 8px 16px;
+                    background: linear-gradient(135deg, #D4AF37 0%, #B8941F 100%);
+                    color: #000;
+                    border: none;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    font-weight: 600;
+                    font-size: 0.875rem;
+                    box-shadow: 0 2px 8px rgba(212,175,55,0.3);
+                ">
+                    📍 Street View
+                </button>
             </div>
         `);
         // ==================== END GEOFENCE VISUALIZATION ====================
@@ -1043,7 +1128,21 @@
                     <div style="font-family: 'Inter'; text-align: center;">
                         <strong style="color: ${typeColor}; font-size: 1.1em;">${typeLabel}</strong><br>
                         ${incident.userProfile?.firstName}<br>
-                        <small>${timeStr}</small>
+                        <small>${timeStr}</small><br>
+                        <button onclick="openStreetView(${lat}, ${lng})" style="
+                            margin-top: 8px;
+                            padding: 8px 16px;
+                            background: linear-gradient(135deg, #007AFF 0%, #0056B3 100%);
+                            color: white;
+                            border: none;
+                            border-radius: 6px;
+                            cursor: pointer;
+                            font-weight: 600;
+                            font-size: 0.875rem;
+                            box-shadow: 0 2px 8px rgba(0,122,255,0.3);
+                        ">
+                            📍 Street View
+                        </button>
                     </div>
                 `);
 

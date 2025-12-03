@@ -599,6 +599,52 @@
 
         L.control.layers(baseMaps, null, { position: 'topright' }).addTo(map);
 
+        // ==================== GEOFENCE VISUALIZATION ====================
+        // Company geofence configuration (matches client-app config)
+        const geofenceConfig = {
+            center: [-26.081096, 28.238763],  // ABC Security HQ - Kempton Park
+            radiusKm: 25,  // 25km coverage radius
+            coverageArea: "Kempton Park, Johannesburg, Edenvale, Boksburg, Benoni"
+        };
+
+        // Draw geofence circle on map
+        const geofenceCircle = L.circle(geofenceConfig.center, {
+            radius: geofenceConfig.radiusKm * 1000,  // Convert km to meters
+            color: '#34C759',  // Green border
+            fillColor: '#34C759',
+            fillOpacity: 0.1,
+            weight: 2,
+            dashArray: '10, 10'  // Dashed line
+        }).addTo(map);
+
+        geofenceCircle.bindPopup(`
+            <div style="font-family: 'Inter'; text-align: center;">
+                <strong style="color: #34C759; font-size: 1.1em;">✅ COVERAGE AREA</strong><br>
+                <span style="color: #666; font-size: 0.9em;">ABC SECURITY</span><br>
+                <span style="font-size: 0.85em; color: #888;">Radius: ${geofenceConfig.radiusKm}km</span><br>
+                <span style="font-size: 0.75em; color: #aaa;">${geofenceConfig.coverageArea}</span>
+            </div>
+        `);
+
+        // Add HQ marker
+        const hqIcon = L.divIcon({
+            html: `<div style="background: #D4AF37; width: 32px; height: 32px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 20px rgba(212,175,55,0.8); display: flex; align-items: center; justify-content: center; color: #000; font-size: 16px; font-weight: bold;">🏢</div>`,
+            className: '',
+            iconSize: [32, 32],
+            iconAnchor: [16, 16]
+        });
+
+        const hqMarker = L.marker(geofenceConfig.center, { icon: hqIcon }).addTo(map);
+        hqMarker.bindPopup(`
+            <div style="font-family: 'Inter'; text-align: center;">
+                <strong style="color: #D4AF37; font-size: 1.1em;">🏢 CONTROL ROOM HQ</strong><br>
+                <span style="color: #666;">ABC SECURITY</span><br>
+                <span style="font-size: 0.85em; color: #888;">Kempton Park, Gauteng</span><br>
+                <span style="font-size: 0.75em; color: #34C759;">Coverage: ${geofenceConfig.radiusKm}km radius</span>
+            </div>
+        `);
+        // ==================== END GEOFENCE VISUALIZATION ====================
+
         const markers = {};
 
         // AUDIO ALERT SYSTEM

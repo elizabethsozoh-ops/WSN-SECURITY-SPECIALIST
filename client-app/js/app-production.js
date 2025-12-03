@@ -44,8 +44,76 @@ const companyConfig = {
   },
   contact: {
     phone: "0123456789"
+  },
+  // Geofence Configuration - Security Coverage Area
+  geofence: {
+    enabled: true,
+    center: {
+      lat: -26.081096,  // ABC Security HQ - Kempton Park, Gauteng
+      lng: 28.238763
+    },
+    radiusKm: 25,  // 25km coverage radius
+    coverageArea: "Kempton Park, Johannesburg, Edenvale, Boksburg, Benoni",
+    allowOutsideAlerts: false,  // Block panic alerts outside coverage
+    warningMessage: "You are outside our security coverage area. Emergency services may be delayed."
   }
 };
+
+// ==================== GEOFENCE FUNCTIONS ====================
+
+/**
+ * Calculate distance between two GPS coordinates using Haversine formula
+ * Returns distance in kilometers
+ */
+function calculateDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371; // Earth's radius in kilometers
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
+/**
+ * Check if user's current location is within the geofence
+ * Returns { inside: boolean, distance: number, message: string }
+ */
+async function checkGeofence() {
+  if (!companyConfig.geofence.enabled) {
+    return { inside: true, distance: 0, message: 'Geofence disabled' };
+  }
+
+  try {
+    // Get current location
+    const location = await getCurrentLocation();
+
+    // Calculate distance from HQ
+    const distance = calculateDistance(
+      location.latitude,
+      location.longitude,
+      companyConfig.geofence.center.lat,
+      companyConfig.geofence.center.lng
+    );
+
+    const inside = distance <= companyConfig.geofence.radiusKm;
+
+    console.log(`📍 Geofence Check: ${distance.toFixed(2)}km from HQ (limit: ${companyConfig.geofence.radiusKm}km) - ${inside ? 'INSIDE' : 'OUTSIDE'}`);
+
+    return {
+      inside: inside,
+      distance: distance,
+      message: inside
+        ? `You are ${distance.toFixed(1)}km from our control room (within ${companyConfig.geofence.radiusKm}km coverage)`
+        : `You are ${distance.toFixed(1)}km away - ${companyConfig.geofence.warningMessage}`
+    };
+  } catch (error) {
+    console.error('❌ Geofence check failed:', error);
+    // On error, allow the alert (safety first)
+    return { inside: true, distance: 0, message: 'Location check failed - proceeding with alert' };
+  }
+}
 
 // Initialize App
 function initApp() {
@@ -526,6 +594,32 @@ async function handleEmergencyButton(e) {
   try {
     showLoading();
 
+    // ==================== GEOFENCE CHECK ====================
+    // Check if user is within security coverage area
+    const geofenceCheck = await checkGeofence();
+
+    if (!geofenceCheck.inside && !companyConfig.geofence.allowOutsideAlerts) {
+      hideLoading();
+
+      const outsideConfirm = confirm(
+        `⚠️ OUTSIDE COVERAGE AREA\n\n` +
+        `${geofenceCheck.message}\n\n` +
+        `Distance: ${geofenceCheck.distance.toFixed(1)}km from control room\n` +
+        `Coverage limit: ${companyConfig.geofence.radiusKm}km\n\n` +
+        `❌ Emergency response may be delayed or unavailable.\n\n` +
+        `Do you want to send the alert anyway and call emergency services directly?`
+      );
+
+      if (!outsideConfirm) {
+        alert(`📞 CALL EMERGENCY SERVICES\n\nSince you're outside our coverage area, please call:\n\n🚨 Police: 10111\n🏥 Ambulance: 10177\n🔥 Fire: 10111\n\nOr dial our control room:\n${companyConfig.contact.phone}`);
+        return;
+      }
+    } else if (!geofenceCheck.inside && companyConfig.geofence.allowOutsideAlerts) {
+      // Show warning but allow alert
+      alert(`⚠️ Coverage Area Warning\n\n${geofenceCheck.message}\n\nYour alert will still be sent, but response time may be longer.`);
+    }
+    // ==================== END GEOFENCE CHECK ====================
+
     // Get current location (REAL-TIME GPS)
     const location = await getCurrentLocation();
 
@@ -572,6 +666,11 @@ async function handleEmergencyButton(e) {
       accountNumber: userData.accountNumber || 'Not Linked',
       userProfile: userData.profile || {},
       companyId: companyConfig.companyId,
+      geofence: {  // Add geofence status to incident
+        inside: geofenceCheck.inside,
+        distanceKm: geofenceCheck.distance,
+        coverageArea: companyConfig.geofence.coverageArea
+      },
       location: {
         coordinates: {
           lat: location.latitude,
@@ -712,6 +811,15 @@ async function triggerGhostPanic() {
       location = { latitude: 0, longitude: 0, accuracy: 0 };
     }
 
+    // Check geofence silently (no user interaction - Ghost Panic always sends)
+    let geofenceStatus = { inside: true, distance: 0, message: 'Geofence check skipped' };
+    try {
+      geofenceStatus = await checkGeofence();
+      console.log(`👻 Ghost Panic Geofence: ${geofenceStatus.inside ? 'INSIDE' : 'OUTSIDE'} coverage (${geofenceStatus.distance.toFixed(1)}km)`);
+    } catch (error) {
+      console.error('Ghost Panic: Geofence check error (continuing anyway):', error);
+    }
+
     // Get address from GPS silently
     let addressFromGPS = 'Location unavailable';
     if (location.latitude !== 0 && location.longitude !== 0) {
@@ -738,6 +846,11 @@ async function triggerGhostPanic() {
       accountNumber: userData.accountNumber || 'Not Linked',
       userProfile: userData.profile || {},
       companyId: companyConfig.companyId,
+      geofence: {  // Add geofence status to incident
+        inside: geofenceStatus.inside,
+        distanceKm: geofenceStatus.distance,
+        coverageArea: companyConfig.geofence.coverageArea
+      },
       location: {
         coordinates: {
           lat: location.latitude,

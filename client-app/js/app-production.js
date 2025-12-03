@@ -1462,11 +1462,10 @@ async function loadIncidentHistory() {
   noHistoryEl.classList.add('hidden');
 
   try {
-    // Query user's incidents ordered by creation date (newest first)
+    // Query user's incidents (without orderBy to avoid composite index requirement)
     const q = query(
       collection(db, 'incidents'),
-      where('userId', '==', currentUser.uid),
-      orderBy('createdAt', 'desc')
+      where('userId', '==', currentUser.uid)
     );
 
     const querySnapshot = await getDocs(q);
@@ -1479,9 +1478,21 @@ async function loadIncidentHistory() {
       return;
     }
 
-    // Render incidents
+    // Get all incidents and sort by date in JavaScript
+    const incidents = [];
     querySnapshot.forEach((doc) => {
-      const incident = { id: doc.id, ...doc.data() };
+      incidents.push({ id: doc.id, ...doc.data() });
+    });
+
+    // Sort by createdAt descending (newest first)
+    incidents.sort((a, b) => {
+      const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(0);
+      const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(0);
+      return dateB - dateA;
+    });
+
+    // Render incidents
+    incidents.forEach((incident) => {
       const incidentCard = createHistoryCard(incident);
       container.appendChild(incidentCard);
     });

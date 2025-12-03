@@ -1643,13 +1643,15 @@
                     orderBy('createdAt', 'desc')
                 );
 
-                const snapshot = await getDocs(q);
-                const incidents = snapshot.docs.map(doc => doc.data());
+                // Use real-time listener instead of one-time getDocs
+                onSnapshot(q, (snapshot) => {
+                    const incidents = snapshot.docs.map(doc => doc.data());
 
-                const activeCount = incidents.filter(i => i.status === 'pending' || i.status === 'dispatched').length;
+                    const activeCount = incidents.filter(i => i.status === 'pending' || i.status === 'dispatched').length;
 
-                document.getElementById('handoverIncidentCount').textContent = incidents.length;
-                document.getElementById('handoverActiveCount').textContent = activeCount;
+                    document.getElementById('handoverIncidentCount').textContent = incidents.length;
+                    document.getElementById('handoverActiveCount').textContent = activeCount;
+                });
 
             } catch (error) {
                 console.error('Error loading shift stats:', error);

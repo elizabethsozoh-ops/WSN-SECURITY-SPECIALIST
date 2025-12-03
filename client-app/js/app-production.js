@@ -43,7 +43,11 @@ const companyConfig = {
     secondary: "#C0C0C0"
   },
   contact: {
-    phone: "0123456789"
+    phone: "+27112345678",  // South Africa format (replace with real number)
+    phoneDisplay: "011 234 5678",  // Display format
+    emergency24h: "+27112345678",  // 24/7 Emergency line
+    whatsapp: "+27112345678",  // WhatsApp number (same or different)
+    email: "control@abcsecurity.co.za"
   },
   // Geofence Configuration - Security Coverage Area
   geofence: {
@@ -261,12 +265,7 @@ function setupEventListeners() {
     triggerGhostPanic();
   });
 
-  document.getElementById('callControlBtn')?.addEventListener('click', () => {
-    const phone = companyConfig.contact.phone;
-    if (confirm(`📞 Call Control Room\n\nDial: ${phone}?`)) {
-      window.location.href = `tel:${phone}`;
-    }
-  });
+  document.getElementById('callControlBtn')?.addEventListener('click', showContactOptions);
 
   // Incident Actions
   document.getElementById('backToDashboardBtn')?.addEventListener('click', () => {
@@ -611,7 +610,8 @@ async function handleEmergencyButton(e) {
       );
 
       if (!outsideConfirm) {
-        alert(`📞 CALL EMERGENCY SERVICES\n\nSince you're outside our coverage area, please call:\n\n🚨 Police: 10111\n🏥 Ambulance: 10177\n🔥 Fire: 10111\n\nOr dial our control room:\n${companyConfig.contact.phone}`);
+        // Show contact options for out-of-coverage users
+        showContactOptions();
         return;
       }
     } else if (!geofenceCheck.inside && companyConfig.geofence.allowOutsideAlerts) {
@@ -1926,6 +1926,178 @@ async function linkAccount() {
       confirmBtn.click();
     }
   });
+}
+
+// ==================== CONTACT OPTIONS ====================
+function showContactOptions() {
+  // Create modal dialog
+  const dialog = document.createElement('div');
+  dialog.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    padding: 20px;
+  `;
+
+  dialog.innerHTML = `
+    <div style="
+      background: linear-gradient(135deg, rgba(20,20,20,0.98) 0%, rgba(40,40,40,0.98) 100%);
+      border: 2px solid var(--color-bronze);
+      border-radius: 16px;
+      padding: 24px;
+      max-width: 400px;
+      width: 100%;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    ">
+      <h2 style="color: var(--color-bronze); font-family: 'Outfit', sans-serif; font-size: 1.5rem; margin: 0 0 8px 0; text-align: center;">
+        📞 Contact Control Room
+      </h2>
+      <p style="color: var(--color-silver); text-align: center; margin: 0 0 24px 0; font-size: 0.875rem;">
+        ${companyConfig.displayName.toUpperCase()} - 24/7 Emergency Response
+      </p>
+
+      <!-- Call Button -->
+      <button onclick="window.location.href='tel:${companyConfig.contact.phone}'" style="
+        width: 100%;
+        padding: 16px;
+        background: linear-gradient(135deg, #34C759 0%, #28A745 100%);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        font-size: 1.1rem;
+        font-weight: 700;
+        cursor: pointer;
+        margin-bottom: 12px;
+        box-shadow: 0 4px 12px rgba(52,199,89,0.3);
+        transition: transform 0.1s;
+      " onmousedown="this.style.transform='scale(0.95)'" onmouseup="this.style.transform='scale(1)'">
+        📞 Call Now: ${companyConfig.contact.phoneDisplay}
+      </button>
+
+      <!-- WhatsApp Button -->
+      <button onclick="window.open('https://wa.me/${companyConfig.contact.whatsapp.replace(/[^0-9]/g, '')}?text=🚨%20Emergency%20-%20I%20need%20assistance', '_blank')" style="
+        width: 100%;
+        padding: 16px;
+        background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        font-size: 1.1rem;
+        font-weight: 700;
+        cursor: pointer;
+        margin-bottom: 12px;
+        box-shadow: 0 4px 12px rgba(37,211,102,0.3);
+        transition: transform 0.1s;
+      " onmousedown="this.style.transform='scale(0.95)'" onmouseup="this.style.transform='scale(1)'">
+        💬 WhatsApp Control Room
+      </button>
+
+      <!-- SMS Button -->
+      <button onclick="window.location.href='sms:${companyConfig.contact.phone}?body=🚨%20Emergency%20-%20I%20need%20assistance'" style="
+        width: 100%;
+        padding: 16px;
+        background: linear-gradient(135deg, #007AFF 0%, #0056B3 100%);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        font-size: 1.1rem;
+        font-weight: 700;
+        cursor: pointer;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 12px rgba(0,122,255,0.3);
+        transition: transform 0.1s;
+      " onmousedown="this.style.transform='scale(0.95)'" onmouseup="this.style.transform='scale(1)'">
+        💬 Send SMS
+      </button>
+
+      <!-- Emergency Numbers Divider -->
+      <div style="
+        text-align: center;
+        color: #666;
+        font-size: 0.75rem;
+        margin: 16px 0;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      ">
+        Other Emergency Services
+      </div>
+
+      <!-- Emergency Services Grid -->
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 20px;">
+        <button onclick="window.location.href='tel:10111'" style="
+          padding: 12px 8px;
+          background: rgba(255,59,48,0.2);
+          color: #FF3B30;
+          border: 1px solid #FF3B30;
+          border-radius: 8px;
+          font-size: 0.75rem;
+          font-weight: 600;
+          cursor: pointer;
+        ">
+          🚨 Police<br>10111
+        </button>
+        <button onclick="window.location.href='tel:10177'" style="
+          padding: 12px 8px;
+          background: rgba(0,122,255,0.2);
+          color: #007AFF;
+          border: 1px solid #007AFF;
+          border-radius: 8px;
+          font-size: 0.75rem;
+          font-weight: 600;
+          cursor: pointer;
+        ">
+          🏥 Ambulance<br>10177
+        </button>
+        <button onclick="window.location.href='tel:10111'" style="
+          padding: 12px 8px;
+          background: rgba(249,115,22,0.2);
+          color: #F97316;
+          border: 1px solid #F97316;
+          border-radius: 8px;
+          font-size: 0.75rem;
+          font-weight: 600;
+          cursor: pointer;
+        ">
+          🔥 Fire<br>10111
+        </button>
+      </div>
+
+      <!-- Close Button -->
+      <button id="closeContactDialog" style="
+        width: 100%;
+        padding: 12px;
+        background: rgba(255,255,255,0.1);
+        color: var(--color-silver);
+        border: 1px solid rgba(255,255,255,0.2);
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+      ">
+        Close
+      </button>
+    </div>
+  `;
+
+  document.body.appendChild(dialog);
+
+  // Close dialog handler
+  dialog.querySelector('#closeContactDialog').onclick = () => {
+    document.body.removeChild(dialog);
+  };
+
+  // Close on background click
+  dialog.onclick = (e) => {
+    if (e.target === dialog) {
+      document.body.removeChild(dialog);
+    }
+  };
 }
 
 // ==================== SAFETY CHECK-IN ====================

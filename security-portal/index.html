@@ -1642,20 +1642,30 @@
             if (!shiftStartTime) return;
 
             try {
-                const q = query(
+                // Query for incidents during this shift
+                const shiftQuery = query(
                     collection(db, 'incidents'),
                     where('createdAt', '>=', shiftStartTime),
                     orderBy('createdAt', 'desc')
                 );
 
-                // Use real-time listener instead of one-time getDocs
-                onSnapshot(q, (snapshot) => {
-                    const incidents = snapshot.docs.map(doc => doc.data());
+                // Query for ALL currently active incidents (regardless of when created)
+                const activeQuery = query(
+                    collection(db, 'incidents'),
+                    where('status', 'in', ['pending', 'dispatched'])
+                );
 
-                    const activeCount = incidents.filter(i => i.status === 'pending' || i.status === 'dispatched').length;
+                // Listen to shift incidents
+                onSnapshot(shiftQuery, (snapshot) => {
+                    const shiftIncidents = snapshot.docs.map(doc => doc.data());
+                    document.getElementById('handoverIncidentCount').textContent = shiftIncidents.length;
+                });
 
-                    document.getElementById('handoverIncidentCount').textContent = incidents.length;
-                    document.getElementById('handoverActiveCount').textContent = activeCount;
+                // Listen to all active incidents
+                onSnapshot(activeQuery, (snapshot) => {
+                    const activeIncidents = snapshot.docs.map(doc => doc.data());
+                    document.getElementById('handoverActiveCount').textContent = activeIncidents.length;
+                    console.log('🔄 Active incidents:', activeIncidents.length, activeIncidents);
                 });
 
             } catch (error) {

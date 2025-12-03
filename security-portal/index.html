@@ -1646,11 +1646,11 @@
                     return;
                 }
 
-                snapshot.forEach(doc => {
+                snapshot.forEach(async doc => {
                     const incident = doc.data();
                     const incidentId = doc.id;
                     const card = document.createElement('div');
-                    card.style.cssText = 'background: rgba(255,255,255,0.05); border-radius: 8px; padding: 15px; margin-bottom: 10px; border-left: 3px solid var(--color-primary);';
+                    card.style.cssText = 'background: rgba(255,255,255,0.05); border-radius: 8px; padding: 15px; margin-bottom: 10px; border-left: 3px solid var(--color-primary); cursor: pointer; transition: all 0.3s;';
 
                     const time = incident.createdAt?.toDate ? incident.createdAt.toDate().toLocaleTimeString() : 'N/A';
                     const type = incident.type || 'unknown';
@@ -1661,9 +1661,35 @@
                     const firstName = incident.userProfile?.firstName || 'Unknown';
                     const lastName = incident.userProfile?.lastName || '';
 
+                    // Check if notes exist
+                    let hasNotes = false;
+                    let notesContent = '';
+                    try {
+                        const notesDoc = await getDoc(doc(db, 'incident_notes', incidentId));
+                        if (notesDoc.exists()) {
+                            hasNotes = true;
+                            const notesData = notesDoc.data();
+                            notesContent = `
+                                <div id="notes-${incidentId}" style="display: none; background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.3); border-radius: 8px; padding: 12px; margin-top: 10px;">
+                                    <div style="color: #3B82F6; font-weight: 600; margin-bottom: 8px;">📝 INCIDENT NOTES</div>
+                                    <div style="color: #C0C0C0; font-size: 0.9rem; line-height: 1.4; margin-bottom: 8px;">${notesData.notes}</div>
+                                    <div style="color: #666; font-size: 0.75rem;">Added by: ${notesData.addedBy}</div>
+                                    <div style="color: #666; font-size: 0.75rem;">${notesData.timestamp?.toDate ? notesData.timestamp.toDate().toLocaleString() : 'N/A'}</div>
+                                </div>
+                            `;
+                        }
+                    } catch (error) {
+                        console.error('Error checking notes:', error);
+                    }
+
+                    const noteIndicator = hasNotes ? '<span style="background: #3B82F6; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; margin-left: 8px;">📝 HAS NOTES</span>' : '';
+
                     card.innerHTML = `
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                            <strong style="color: var(--color-primary);">${type.toUpperCase()}</strong>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;" onclick="event.stopPropagation()">
+                            <div>
+                                <strong style="color: var(--color-primary);">${type.toUpperCase()}</strong>
+                                ${noteIndicator}
+                            </div>
                             <span style="color: #888; font-size: 0.85rem;">${time}</span>
                         </div>
                         <div style="color: #aaa; font-size: 0.9rem; margin-bottom: 5px;">
@@ -1672,7 +1698,8 @@
                         <div style="color: #aaa; font-size: 0.9rem; margin-bottom: 5px;">User: ${user}</div>
                         <div style="color: #00ff88; font-size: 0.9rem; margin-bottom: 5px;">📍 ${address}</div>
                         <div style="color: #888; font-size: 0.85rem; margin-bottom: 10px;">Resolution: ${resolution}</div>
-                        <div style="display: flex; gap: 8px;">
+                        ${notesContent}
+                        <div style="display: flex; gap: 8px; margin-top: 10px;" onclick="event.stopPropagation()">
                             <button onclick="addIncidentNotes('${incidentId}', '${user}')" style="flex: 1; background: rgba(59,130,246,0.2); color: #3B82F6; border: 1px solid #3B82F6; padding: 8px; border-radius: 6px; cursor: pointer; font-size: 0.75rem;">
                                 📝 ADD NOTES
                             </button>
@@ -1681,6 +1708,21 @@
                             </button>
                         </div>
                     `;
+
+                    // Add click handler to toggle notes visibility
+                    card.addEventListener('click', () => {
+                        const notesDiv = document.getElementById(`notes-${incidentId}`);
+                        if (notesDiv) {
+                            if (notesDiv.style.display === 'none') {
+                                notesDiv.style.display = 'block';
+                                card.style.background = 'rgba(255,255,255,0.08)';
+                            } else {
+                                notesDiv.style.display = 'none';
+                                card.style.background = 'rgba(255,255,255,0.05)';
+                            }
+                        }
+                    });
+
                     archiveList.appendChild(card);
                 });
 
@@ -1899,6 +1941,11 @@ Powered by WSN GROUP`;
                 }, { merge: true });
 
                 alert('✅ Notes saved successfully!\n\nNotes: ' + notes);
+
+                // Reload archive if on archive tab to show updated notes
+                if (document.getElementById('archiveContent').style.display !== 'none') {
+                    loadArchive();
+                }
             } catch (error) {
                 console.error('Error saving incident notes:', error);
                 alert('❌ Error saving notes: ' + error.message);

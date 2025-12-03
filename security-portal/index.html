@@ -1673,7 +1673,7 @@
                 });
 
                 alert('✅ Handover notes saved successfully');
-                document.getElementById('handoverNotes').value = '';
+                // Don't clear notes - keep them visible for PDF export
 
             } catch (error) {
                 console.error('Error saving handover notes:', error);

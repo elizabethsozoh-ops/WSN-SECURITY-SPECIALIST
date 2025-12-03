@@ -23,14 +23,21 @@ const storage = getStorage(app);
 // App State
 let currentUser = null;
 let currentIncident = null;
-let reportUploadedFiles = []; // Files uploaded in report form
-let incidentUploadedFiles = []; // Files uploaded in incident tracking
+let reportUploadedFiles = []; // Files for incident report
+let incidentUploadedFiles = []; // Files for active incident tracking
+let incidentMap = null; // Google Map instance
+let incidentMarker = null; // Current incident marker
+
+// Google Maps Callback
+window.initMap = function() {
+  console.log('✅ Google Maps API loaded');
+};
 
 // Company Config
 const companyConfig = {
   companyId: "wsn-group",
   displayName: "abc security",
-  tagline: "Powered by WSN Security Specialist",
+  tagline: "Powered by WSN GROUP",
   colors: {
     primary: "#D4AF37",
     secondary: "#C0C0C0"
@@ -52,6 +59,7 @@ function initApp() {
 
   // Setup auth state listener
   onAuthStateChanged(auth, (user) => {
+    console.log('🔐 Auth state changed:', user ? 'User logged in' : 'No user');
     if (user) {
       currentUser = user;
       loadUserProfile(user.uid);
@@ -61,6 +69,15 @@ function initApp() {
       hideLoading();
     }
   });
+
+  // Fallback: Hide loading after 3 seconds if still showing
+  setTimeout(() => {
+    if (!document.getElementById('loadingScreen')?.classList.contains('hidden')) {
+      console.warn('⚠️ Loading timeout - forcing hide');
+      hideLoading();
+      showScreen('login');
+    }
+  }, 3000);
 
   // Setup event listeners
   setupEventListeners();
@@ -87,7 +104,7 @@ function applyBranding() {
 
 // Screen Management
 function showScreen(screenName) {
-  const screens = ['loginScreen', 'registerScreen', 'dashboardScreen', 'incidentScreen', 'reportScreen'];
+  const screens = ['loginScreen', 'registerScreen', 'dashboardScreen', 'incidentScreen', 'incidentReportScreen', 'incidentReportDetailsScreen', 'incidentHistoryScreen', 'emergencyContactsScreen', 'safetyCheckInScreen', 'liveLocationScreen'];
   screens.forEach(screen => {
     document.getElementById(screen)?.classList.add('hidden');
   });
@@ -131,7 +148,6 @@ function hideError(elementId) {
 
 // Event Listeners
 function setupEventListeners() {
-  console.log('✅ Setting up event listeners...');
   // Show Register Screen
   document.getElementById('showRegisterBtn')?.addEventListener('click', () => {
     showScreen('register');
@@ -153,17 +169,29 @@ function setupEventListeners() {
     btn.addEventListener('click', handleEmergencyButton);
   });
 
-  // Ghost Panic Button
-  document.getElementById('ghostPanicBtn')?.addEventListener('click', handleGhostPanic);
-
   // Logout button
   document.getElementById('logoutBtn')?.addEventListener('click', handleLogout);
 
-  // Safety Tools
-  document.getElementById('liveLocationBtn')?.addEventListener('click', handleLiveLocation);
-  document.getElementById('alertFamilyBtn')?.addEventListener('click', handleAlertFamily);
-  document.getElementById('safetyCheckBtn')?.addEventListener('click', handleSafetyCheck);
-  document.getElementById('manageContactsBtn')?.addEventListener('click', handleManageContacts);
+  // Quick Actions
+  document.getElementById('viewHistoryBtn')?.addEventListener('click', () => {
+    showScreen('incidentHistoryScreen');
+    loadIncidentHistory();
+  });
+
+  document.getElementById('backFromHistoryBtn')?.addEventListener('click', () => {
+    showScreen('dashboardScreen');
+  });
+
+  document.getElementById('manageDependantsBtn')?.addEventListener('click', () => {
+    alert('👥 Manage Dependants\n\nThis feature is coming soon!');
+  });
+
+  // 👻 GHOST PANIC Button - Revolutionary invisible panic feature
+  document.getElementById('silentAlarmBtn')?.addEventListener('click', () => {
+    // NO confirmation dialog - instant activation
+    // This is critical for real danger situations
+    triggerGhostPanic();
+  });
 
   document.getElementById('callControlBtn')?.addEventListener('click', () => {
     const phone = companyConfig.contact.phone;
@@ -183,16 +211,79 @@ function setupEventListeners() {
     alert('📞 Calling responding unit...');
   });
 
-  // Incident Report Handlers
-  document.getElementById('fileUploadContainer')?.addEventListener('click', () => {
-    document.getElementById('reportFiles').click();
+  // Incident Report Button
+  document.getElementById('incidentReportBtn')?.addEventListener('click', () => {
+    showScreen('incidentReport');
   });
 
-  document.getElementById('reportFiles')?.addEventListener('change', handleFileSelect);
-  document.getElementById('incidentReportForm')?.addEventListener('submit', handleReportSubmit);
-  document.getElementById('cancelReportBtn')?.addEventListener('click', () => {
+  // Incident Report Category Selection
+  document.querySelectorAll('.category-btn').forEach(btn => {
+    btn.addEventListener('click', handleCategorySelection);
+  });
+
+  // Incident Report Form
+  document.getElementById('incidentReportForm')?.addEventListener('submit', handleIncidentReportSubmit);
+
+  // Back buttons for report screens
+  document.getElementById('backFromReportBtn')?.addEventListener('click', () => {
     showScreen('dashboard');
   });
+
+  document.getElementById('backToReportCategoriesBtn')?.addEventListener('click', () => {
+    showScreen('incidentReport');
+  });
+
+  // Voice Input Button
+  document.getElementById('voiceInputBtn')?.addEventListener('click', handleVoiceInput);
+
+  // File Upload for Incident Reports
+  document.getElementById('reportUploadBtn')?.addEventListener('click', () => {
+    document.getElementById('reportFileInput')?.click();
+  });
+
+  document.getElementById('reportFileInput')?.addEventListener('change', handleReportFileSelection);
+
+  // Emergency Contacts
+  document.getElementById('emergencyContactsBtn')?.addEventListener('click', () => {
+    showScreen('emergencyContacts');
+    loadEmergencyContacts();
+  });
+
+  document.getElementById('backFromContactsBtn')?.addEventListener('click', () => {
+    showScreen('dashboard');
+  });
+
+  document.getElementById('addContactForm')?.addEventListener('submit', handleAddContact);
+
+  // Safety Check-In
+  document.getElementById('safetyCheckInBtn')?.addEventListener('click', () => {
+    showScreen('safetyCheckIn');
+    loadCheckInStatus();
+  });
+
+  document.getElementById('backFromCheckInBtn')?.addEventListener('click', () => {
+    showScreen('dashboard');
+  });
+
+  document.getElementById('toggleCheckInBtn')?.addEventListener('click', toggleCheckIn);
+
+  // Live Location Sharing
+  document.getElementById('shareLiveLocationBtn')?.addEventListener('click', () => {
+    showScreen('liveLocation');
+    loadLocationStatus();
+  });
+
+  document.getElementById('backFromLocationBtn')?.addEventListener('click', () => {
+    showScreen('dashboard');
+  });
+
+  document.getElementById('toggleLocationBtn')?.addEventListener('click', toggleLiveLocation);
+
+  // Alert My Family Button (from dashboard)
+  document.getElementById('notifyFamilyBtn')?.addEventListener('click', alertMyFamily);
+
+  // Link Account Button
+  document.getElementById('linkAccountBtn')?.addEventListener('click', linkAccount);
 }
 
 // Authentication Handlers
@@ -321,10 +412,50 @@ async function loadUserProfile(userId) {
       const userData = userDoc.data();
       const profile = userData.profile || {};
 
+      // Auto-assign mock account numbers and roles for test users
+      const mockAccounts = {
+        'skylupa@gmail.com': 'ABC-10001',
+        'elizabeth@example.com': 'ABC-10002'
+      };
+
+      const adminUsers = ['controller@abcsecurity.com', 'admin@abcsecurity.com'];
+
+      // Auto-assign account number
+      if (!userData.accountNumber && mockAccounts[currentUser.email]) {
+        console.log('🔗 Auto-assigning account number for test user:', currentUser.email);
+        await setDoc(userDocRef, {
+          accountNumber: mockAccounts[currentUser.email],
+          accountLinkedAt: serverTimestamp()
+        }, { merge: true });
+        userData.accountNumber = mockAccounts[currentUser.email];
+      }
+
+      // Auto-assign admin role
+      if (!userData.role && adminUsers.includes(currentUser.email)) {
+        console.log('👑 Auto-assigning admin role to:', currentUser.email);
+        await setDoc(userDocRef, {
+          role: 'admin',
+          roleAssignedAt: serverTimestamp()
+        }, { merge: true });
+        userData.role = 'admin';
+      }
+
       // Update welcome message
       const welcomeMessage = document.getElementById('welcomeMessage');
       if (welcomeMessage) {
         welcomeMessage.textContent = `Welcome, ${profile.firstName || currentUser.email.split('@')[0]}`;
+      }
+
+      // Update account number display
+      const accountNumberEl = document.getElementById('accountNumber');
+      if (accountNumberEl) {
+        if (userData.accountNumber) {
+          accountNumberEl.textContent = userData.accountNumber;
+          accountNumberEl.style.color = 'var(--color-success)';
+        } else {
+          accountNumberEl.textContent = 'Not Linked';
+          accountNumberEl.style.color = '#888';
+        }
       }
 
       // Update last login
@@ -374,16 +505,8 @@ async function loadUserProfile(userId) {
 
 // Emergency Button Handler
 async function handleEmergencyButton(e) {
-  console.log('🚨 Emergency button clicked:', e);
   const button = e.currentTarget;
   const emergencyType = button.dataset.type;
-  console.log('Emergency type:', emergencyType);
-
-  // Handle Incident Report separately
-  if (emergencyType === 'incident-report') {
-    showReportScreen();
-    return;
-  }
 
   const emergencyLabels = {
     panic: 'Armed Response',
@@ -446,6 +569,7 @@ async function handleEmergencyButton(e) {
       priority: (emergencyType === 'panic' || emergencyType === 'medical') ? 'critical' : 'high',
       userId: currentUser.uid,
       userEmail: currentUser.email,
+      accountNumber: userData.accountNumber || 'Not Linked',
       userProfile: userData.profile || {},
       companyId: companyConfig.companyId,
       location: {
@@ -477,61 +601,6 @@ async function handleEmergencyButton(e) {
     hideLoading();
     console.error('Error creating incident:', error);
     alert(`⚠️ Error creating emergency alert.\n\nDetails: ${error.message}\n\nPlease call the control room directly:\n${companyConfig.contact.phone}`);
-  }
-}
-
-// Ghost Panic Handler
-async function handleGhostPanic() {
-  console.log('👻 Ghost Panic activated!');
-  // NO CONFIRMATION - Silent and immediate
-  try {
-    // 1. Get location silently
-    const location = await getCurrentLocation();
-
-    // 2. Create silent incident
-    const incident = {
-      type: 'ghost-panic', // Special type for control room
-      status: 'pending',
-      priority: 'critical',
-      userId: currentUser.uid,
-      userEmail: currentUser.email,
-      companyId: companyConfig.companyId,
-      location: {
-        coordinates: {
-          lat: location.latitude,
-          lng: location.longitude,
-          accuracy: location.accuracy
-        },
-        // Don't wait for address reverse geocoding to be faster
-        address: `GPS: ${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`,
-        timestamp: serverTimestamp()
-      },
-      timeline: [{
-        timestamp: new Date(),
-        action: 'ghost_panic_activated',
-        actor: 'client',
-        note: 'GHOST PANIC ACTIVATED - SILENT ALARM'
-      }],
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    };
-
-    // 3. Send to Firebase
-    await addDoc(collection(db, 'incidents'), incident);
-
-    // 4. "Close" the app immediately
-    // We can't actually close the browser tab via JS usually, so we simulate it
-    // by replacing the body with a generic error or blank page to look like a crash/exit
-    document.body.innerHTML = '';
-    document.body.style.background = '#000';
-
-    // Optional: Redirect to Google or generic page
-    window.location.href = 'https://www.google.com';
-
-  } catch (error) {
-    console.error('Ghost panic error:', error);
-    // Even if error, try to close/hide app
-    window.location.href = 'https://www.google.com';
   }
 }
 
@@ -623,6 +692,96 @@ function updateIncidentScreen(incident) {
       // Scroll to bottom
       timelineContainer.scrollTop = timelineContainer.scrollHeight;
     }
+  }
+}
+
+// 🔕 GHOST PANIC - Revolutionary Invisible Panic Feature
+// Sends alert to control room but COMPLETELY closes app (returns to home screen)
+// NO visual feedback on phone - appears as if user just closed the app
+// CRITICAL for situations where attacker is watching the phone
+async function triggerGhostPanic() {
+  try {
+    console.log('👻 GHOST PANIC ACTIVATED');
+
+    // Get current location silently (no UI updates)
+    let location;
+    try {
+      location = await getCurrentLocation();
+    } catch (error) {
+      console.error('Ghost Panic: Location error (continuing anyway):', error);
+      location = { latitude: 0, longitude: 0, accuracy: 0 };
+    }
+
+    // Get address from GPS silently
+    let addressFromGPS = 'Location unavailable';
+    if (location.latitude !== 0 && location.longitude !== 0) {
+      try {
+        addressFromGPS = await reverseGeocodeLocation(location.latitude, location.longitude);
+      } catch (error) {
+        console.error('Ghost Panic: Geocoding error (continuing anyway):', error);
+        addressFromGPS = `GPS: ${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`;
+      }
+    }
+
+    // Get user data silently
+    const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+    const userData = userDoc.exists() ? userDoc.data() : {};
+
+    // Create GHOST PANIC incident in Firebase
+    const incident = {
+      type: 'ghost-panic',
+      ghostMode: true, // Special flag for control room to know this is ghost panic
+      status: 'pending',
+      priority: 'critical', // HIGHEST priority
+      userId: currentUser.uid,
+      userEmail: currentUser.email,
+      accountNumber: userData.accountNumber || 'Not Linked',
+      userProfile: userData.profile || {},
+      companyId: companyConfig.companyId,
+      location: {
+        coordinates: {
+          lat: location.latitude,
+          lng: location.longitude,
+          accuracy: location.accuracy
+        },
+        address: addressFromGPS,
+        timestamp: serverTimestamp()
+      },
+      timeline: [{
+        timestamp: new Date(),
+        action: 'ghost_panic_activated',
+        actor: 'client',
+        note: '👻 GHOST PANIC - Client activated invisible panic (app closed on their device)'
+      }],
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    };
+
+    // Send to Firebase (fire and forget - don't wait for response)
+    addDoc(collection(db, 'incidents'), incident).catch(err => {
+      console.error('Ghost Panic: Firebase error:', err);
+    });
+
+    // IMMEDIATELY close app and return to home screen
+    // Multiple methods to ensure it works across different browsers/devices
+
+    // Method 1: Close current window (works in PWA)
+    if (window.opener) {
+      window.close();
+    }
+
+    // Method 2: Navigate away from app (works on iOS Safari)
+    window.location.href = 'about:blank';
+
+    // Method 3: Go back to previous page (fallback)
+    setTimeout(() => {
+      window.history.back();
+    }, 100);
+
+  } catch (error) {
+    console.error('Ghost Panic: Critical error:', error);
+    // Even if there's an error, still try to close the app
+    window.location.href = 'about:blank';
   }
 }
 
@@ -776,6 +935,482 @@ async function reverseGeocodeLocation(lat, lng) {
   }
 }
 
+// Incident Report Handlers
+let selectedCategory = null;
+
+const categoryLabels = {
+  'suspicious-behaviour': 'Suspicious Behaviour',
+  'noise-complaint': 'Noise Complaint',
+  'vandalism': 'Vandalism / Property Damage',
+  'trespassing': 'Trespassing',
+  'lost-found': 'Lost & Found',
+  'traffic-incident': 'Traffic Incident',
+  'other': 'Other'
+};
+
+function handleCategorySelection(e) {
+  const button = e.currentTarget;
+  selectedCategory = button.dataset.category;
+
+  // Update the category display
+  const categoryDisplay = document.getElementById('reportCategory');
+  if (categoryDisplay) {
+    categoryDisplay.textContent = categoryLabels[selectedCategory];
+  }
+
+  // Clear the form
+  document.getElementById('reportDetails').value = '';
+  document.getElementById('reportLocation').value = '';
+  hideError('reportError');
+
+  // Show the details screen
+  showScreen('incidentReportDetails');
+}
+
+async function handleIncidentReportSubmit(e) {
+  e.preventDefault();
+  hideError('reportError');
+
+  const details = document.getElementById('reportDetails').value;
+  const location = document.getElementById('reportLocation').value;
+
+  if (!selectedCategory) {
+    showError('reportError', 'Please select a category');
+    return;
+  }
+
+  if (!details.trim()) {
+    showError('reportError', 'Please describe what you observed');
+    return;
+  }
+
+  try {
+    showLoading();
+
+    // Get current GPS location
+    const gpsLocation = await getCurrentLocation();
+    const addressFromGPS = await reverseGeocodeLocation(gpsLocation.latitude, gpsLocation.longitude);
+
+    // Get user data
+    let userData = { profile: {} };
+
+    if (!currentUser.uid.startsWith('demo-user-')) {
+      let userDocRef = doc(db, 'users', currentUser.uid);
+      let userDoc = await getDoc(userDocRef);
+
+      if (!userDoc.exists()) {
+        const q = query(collection(db, 'users'), where('userId', '==', currentUser.uid));
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+          userDoc = querySnapshot.docs[0];
+        }
+      }
+
+      if (userDoc.exists()) {
+        userData = userDoc.data();
+      }
+    } else {
+      userData.profile = {
+        firstName: 'Demo',
+        lastName: 'User',
+        phone: '000-000-0000',
+        address: 'Demo Address'
+      };
+    }
+
+    // Create incident report with temporary ID for file uploads
+    const tempIncidentId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    // Upload files first if any
+    let attachments = [];
+    if (reportUploadedFiles.length > 0) {
+      try {
+        attachments = await uploadReportFilesToStorage(tempIncidentId);
+      } catch (uploadError) {
+        console.error('File upload error:', uploadError);
+        // Continue with report submission even if upload fails
+      }
+    }
+
+    const report = {
+      type: 'incident-report',
+      category: selectedCategory,
+      categoryLabel: categoryLabels[selectedCategory],
+      reportCategory: categoryLabels[selectedCategory], // For control room display
+      reportDescription: details, // For control room display
+      reportLocation: location || '', // Specific location if provided
+      status: 'pending',
+      priority: 'low',
+      userId: currentUser.uid,
+      userEmail: currentUser.email,
+      accountNumber: userData.accountNumber || 'Not Linked',
+      userProfile: userData.profile || {},
+      companyId: companyConfig.companyId,
+      details: details,
+      attachments: attachments, // Add uploaded files
+      location: {
+        coordinates: {
+          lat: gpsLocation.latitude,
+          lng: gpsLocation.longitude,
+          accuracy: gpsLocation.accuracy
+        },
+        address: addressFromGPS, // GPS-based address
+        timestamp: serverTimestamp()
+      },
+      timeline: [{
+        timestamp: new Date(),
+        action: 'report_created',
+        actor: 'client',
+        note: `Incident report submitted: ${categoryLabels[selectedCategory]}${attachments.length > 0 ? ` (${attachments.length} file${attachments.length > 1 ? 's' : ''} attached)` : ''}`
+      }],
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    };
+
+    await addDoc(collection(db, 'incidents'), report);
+
+    hideLoading();
+    alert('✓ Report Submitted\n\nYour incident report has been received by the control room. You will be contacted if additional information is needed.');
+
+    // Reset and go back to dashboard
+    selectedCategory = null;
+    document.getElementById('reportDetails').value = '';
+    document.getElementById('reportLocation').value = '';
+    showScreen('dashboard');
+
+  } catch (error) {
+    hideLoading();
+    console.error('Error submitting report:', error);
+    showError('reportError', 'Error submitting report. Please try again.');
+  }
+}
+
+// Voice Input Handler
+function handleVoiceInput() {
+  const textarea = document.getElementById('reportDetails');
+  const statusEl = document.getElementById('voiceStatus');
+  const btn = document.getElementById('voiceInputBtn');
+
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    alert('Voice input is not supported in your browser. Please use Chrome, Edge, or Safari.');
+    return;
+  }
+
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const recognition = new SpeechRecognition();
+
+  recognition.lang = 'en-US';
+  recognition.continuous = false;
+  recognition.interimResults = false;
+
+  statusEl.textContent = '🎤 Listening... Speak now';
+  statusEl.style.display = 'block';
+  btn.disabled = true;
+  btn.textContent = '🎤 Listening...';
+
+  recognition.onresult = (event) => {
+    const transcript = event.results[0][0].transcript;
+    textarea.value = transcript;
+    statusEl.textContent = '✓ Voice input complete';
+    statusEl.style.color = '#34C759';
+  };
+
+  recognition.onerror = (event) => {
+    console.error('Speech recognition error:', event.error);
+    statusEl.textContent = '✗ Error: ' + event.error;
+    statusEl.style.color = '#FF3B30';
+  };
+
+  recognition.onend = () => {
+    btn.disabled = false;
+    btn.textContent = '🎤 Use Voice Input';
+    setTimeout(() => {
+      statusEl.style.display = 'none';
+    }, 3000);
+  };
+
+  recognition.start();
+}
+
+// File Upload Functions
+async function handleReportFileSelection(e) {
+  const files = Array.from(e.target.files);
+
+  if (files.length === 0) return;
+
+  // Validate files
+  const maxSize = 100 * 1024 * 1024; // 100MB
+  const validFiles = [];
+
+  for (const file of files) {
+    if (file.size > maxSize) {
+      alert(`File "${file.name}" is too large. Maximum file size is 100MB.`);
+      continue;
+    }
+
+    // Check if it's image or video
+    if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
+      alert(`File "${file.name}" is not a valid image or video file.`);
+      continue;
+    }
+
+    validFiles.push(file);
+  }
+
+  if (validFiles.length === 0) {
+    e.target.value = ''; // Reset input
+    return;
+  }
+
+  // Add to upload queue
+  reportUploadedFiles.push(...validFiles);
+
+  // Show preview
+  displayReportFilePreview();
+
+  // Reset file input so same file can be selected again
+  e.target.value = '';
+}
+
+function displayReportFilePreview() {
+  const container = document.getElementById('reportFilePreview');
+  const wrapper = document.getElementById('reportFilePreviewContainer');
+
+  if (reportUploadedFiles.length === 0) {
+    wrapper.style.display = 'none';
+    return;
+  }
+
+  wrapper.style.display = 'block';
+  container.innerHTML = '';
+
+  reportUploadedFiles.forEach((file, index) => {
+    const preview = document.createElement('div');
+    preview.style.cssText = 'position: relative; background: rgba(0,0,0,0.3); border-radius: 8px; overflow: hidden; aspect-ratio: 1;';
+
+    // Create thumbnail
+    const thumb = document.createElement('div');
+    thumb.style.cssText = 'width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; flex-direction: column; padding: 0.5rem;';
+
+    if (file.type.startsWith('image/')) {
+      const img = document.createElement('img');
+      img.src = URL.createObjectURL(file);
+      img.style.cssText = 'width: 100%; height: 100%; object-fit: cover;';
+      thumb.appendChild(img);
+    } else if (file.type.startsWith('video/')) {
+      thumb.innerHTML = `<div style="font-size: 2rem;">🎥</div><div style="font-size: 0.7rem; color: var(--color-silver); text-align: center; margin-top: 0.25rem;">${file.name.substring(0, 15)}...</div>`;
+    }
+
+    // Remove button
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.innerHTML = '✕';
+    removeBtn.style.cssText = 'position: absolute; top: 4px; right: 4px; background: rgba(255,0,0,0.8); color: white; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-size: 14px; font-weight: bold;';
+    removeBtn.onclick = () => removeReportFile(index);
+
+    preview.appendChild(thumb);
+    preview.appendChild(removeBtn);
+    container.appendChild(preview);
+  });
+}
+
+function removeReportFile(index) {
+  reportUploadedFiles.splice(index, 1);
+  displayReportFilePreview();
+}
+
+async function uploadReportFilesToStorage(incidentId) {
+  if (reportUploadedFiles.length === 0) {
+    return [];
+  }
+
+  const progressContainer = document.getElementById('reportUploadProgress');
+  const progressBar = document.getElementById('reportUploadProgressBar');
+  const progressPercent = document.getElementById('reportUploadPercent');
+  const statusText = document.getElementById('reportUploadStatus');
+
+  progressContainer.style.display = 'block';
+
+  const uploadedUrls = [];
+
+  for (let i = 0; i < reportUploadedFiles.length; i++) {
+    const file = reportUploadedFiles[i];
+    const fileName = `incidents/${incidentId}/${Date.now()}_${file.name}`;
+    const storageRef = ref(storage, fileName);
+
+    try {
+      statusText.textContent = `Uploading ${i + 1} of ${reportUploadedFiles.length}: ${file.name}`;
+
+      // Upload with progress tracking
+      const uploadTask = uploadBytesResumable(storageRef, file);
+
+      const downloadURL = await new Promise((resolve, reject) => {
+        uploadTask.on('state_changed',
+          (snapshot) => {
+            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+            const totalProgress = ((i + (progress / 100)) / reportUploadedFiles.length) * 100;
+            progressBar.style.width = totalProgress + '%';
+            progressPercent.textContent = Math.round(totalProgress) + '%';
+          },
+          (error) => {
+            console.error('Upload error:', error);
+            reject(error);
+          },
+          async () => {
+            const url = await getDownloadURL(uploadTask.snapshot.ref);
+            resolve(url);
+          }
+        );
+      });
+
+      uploadedUrls.push({
+        url: downloadURL,
+        name: file.name,
+        type: file.type,
+        size: file.size
+      });
+
+    } catch (error) {
+      console.error(`Failed to upload ${file.name}:`, error);
+      alert(`Failed to upload ${file.name}. Continuing with other files.`);
+    }
+  }
+
+  progressContainer.style.display = 'none';
+  progressBar.style.width = '0%';
+  progressPercent.textContent = '0%';
+
+  // Clear the uploaded files array
+  reportUploadedFiles = [];
+  displayReportFilePreview();
+
+  return uploadedUrls;
+}
+
+// Incident History Functions
+async function loadIncidentHistory() {
+  const container = document.getElementById('historyContainer');
+  const loadingEl = document.getElementById('historyLoading');
+  const noHistoryEl = document.getElementById('noHistoryMessage');
+
+  // Show loading
+  container.innerHTML = '';
+  loadingEl.classList.remove('hidden');
+  noHistoryEl.classList.add('hidden');
+
+  try {
+    // Query user's incidents ordered by creation date (newest first)
+    const q = query(
+      collection(db, 'incidents'),
+      where('userId', '==', currentUser.uid),
+      orderBy('createdAt', 'desc')
+    );
+
+    const querySnapshot = await getDocs(q);
+
+    // Hide loading
+    loadingEl.classList.add('hidden');
+
+    if (querySnapshot.empty) {
+      noHistoryEl.classList.remove('hidden');
+      return;
+    }
+
+    // Render incidents
+    querySnapshot.forEach((doc) => {
+      const incident = { id: doc.id, ...doc.data() };
+      const incidentCard = createHistoryCard(incident);
+      container.appendChild(incidentCard);
+    });
+
+  } catch (error) {
+    console.error('Error loading incident history:', error);
+    loadingEl.classList.add('hidden');
+    container.innerHTML = `
+      <div class="card card-metallic" style="text-align: center; padding: 2rem; color: var(--color-danger);">
+        <h3>Error Loading History</h3>
+        <p>${error.message}</p>
+        <button class="btn btn-secondary" onclick="loadIncidentHistory()" style="margin-top: 1rem;">
+          Try Again
+        </button>
+      </div>
+    `;
+  }
+}
+
+function createHistoryCard(incident) {
+  const card = document.createElement('div');
+  card.className = 'card card-metallic';
+  card.style.marginBottom = '1rem';
+
+  // Type labels and colors
+  const typeConfig = {
+    'panic': { label: '🚨 PANIC!!!!', color: '#FF3B30' },
+    'ghost-panic': { label: '⚠️ GHOST ALARM', color: '#8B0000' },
+    'medical': { label: '🏥 MEDICAL ASSISTANCE', color: '#007AFF' },
+    'fire': { label: '🔥 FIRE & RESCUE', color: '#FF9500' },
+    'technical': { label: '🔧 TECHNICAL DEPARTMENT', color: '#888' },
+    'incident-report': { label: '📋 INCIDENT REPORT', color: '#9B59B6' }
+  };
+
+  const config = typeConfig[incident.type] || { label: incident.type, color: '#666' };
+
+  // Status badges
+  const statusConfig = {
+    'pending': { label: '⏳ Pending', color: '#FF9500' },
+    'dispatched': { label: '🚔 Dispatched', color: '#007AFF' },
+    'resolved': { label: '✓ Resolved', color: '#34C759' },
+    'cancelled': { label: '✕ Cancelled', color: '#888' }
+  };
+
+  const status = statusConfig[incident.status] || { label: incident.status, color: '#666' };
+
+  // Format timestamp
+  const timestamp = incident.createdAt?.toDate ? incident.createdAt.toDate() : new Date();
+  const timeStr = timestamp.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) + ' at ' + timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  // Build report details if it's an incident report
+  const reportDetails = incident.type === 'incident-report' ? `
+    <div style="background: rgba(155,89,182,0.1); border: 1px solid rgba(155,89,182,0.3); border-radius: 8px; padding: 10px; margin-top: 10px;">
+      <div style="font-weight: 600; color: #9B59B6; font-size: 0.85rem;">
+        ${incident.reportCategory || incident.categoryLabel || 'Unknown Category'}
+      </div>
+      <div style="color: var(--color-silver); font-size: 0.8rem; margin-top: 5px;">
+        ${incident.reportDescription || incident.details || 'No description'}
+      </div>
+    </div>
+  ` : '';
+
+  card.innerHTML = `
+    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+      <div>
+        <div style="font-weight: 700; color: ${config.color}; font-size: 0.95rem;">
+          ${config.label}
+        </div>
+        <div style="color: var(--color-silver); font-size: 0.75rem; margin-top: 4px;">
+          ${timeStr}
+        </div>
+      </div>
+      <div style="background: ${status.color}; color: #000; padding: 4px 12px; border-radius: 12px; font-size: 0.75rem; font-weight: 600;">
+        ${status.label}
+      </div>
+    </div>
+
+    ${reportDetails}
+
+    <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1);">
+      <div style="color: var(--color-silver); font-size: 0.8rem;">
+        <strong>Location:</strong> ${incident.location?.address || 'No address'}
+      </div>
+      <div style="color: var(--color-silver); font-size: 0.75rem; margin-top: 4px;">
+        ID: ${incident.id.substr(0, 8).toUpperCase()}
+      </div>
+    </div>
+  `;
+
+  return card;
+}
+
 // Error Messages
 function getErrorMessage(errorCode) {
   const errorMessages = {
@@ -792,466 +1427,538 @@ function getErrorMessage(errorCode) {
   return errorMessages[errorCode] || 'An error occurred. Please try again.';
 }
 
-// Incident Report Functions
-function showReportScreen() {
-  // Auto-fill location
-  const locationInput = document.getElementById('reportLocation');
-  if (locationInput) {
-    locationInput.value = 'Fetching location...';
-    getCurrentLocation().then(async (loc) => {
-      const address = await reverseGeocodeLocation(loc.latitude, loc.longitude);
-      locationInput.value = address;
-    }).catch(err => {
-      console.error('Location error:', err);
-      locationInput.value = 'Location unavailable';
-    });
-  }
+// Make loadIncidentHistory available globally for inline onclick
+window.loadIncidentHistory = loadIncidentHistory;
 
-  showScreen('report');
-}
+// ==================== EMERGENCY CONTACTS ====================
+let emergencyContacts = [];
 
-let selectedFiles = [];
-
-async function handleFileSelect(e) {
-  const files = Array.from(e.target.files);
-  if (files.length > 0) {
-    await handleReportFileSelection(files);
+async function loadEmergencyContacts() {
+  try {
+    const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+    if (userDoc.exists()) {
+      emergencyContacts = userDoc.data().emergencyContacts || [];
+      displayEmergencyContacts();
+    }
+  } catch (error) {
+    console.error('Error loading emergency contacts:', error);
   }
 }
 
-async function handleReportSubmit(e) {
-  e.preventDefault();
-  hideError('reportError');
+function displayEmergencyContacts() {
+  const container = document.getElementById('contactsList');
+  const noContactsMsg = document.getElementById('noContactsMessage');
 
-  const category = document.getElementById('reportCategory').value;
-  const description = document.getElementById('reportDescription').value;
-  const locationText = document.getElementById('reportLocation').value;
-  const submitBtn = e.target.querySelector('button[type="submit"]');
-
-  if (!category) {
-    showError('reportError', 'Please select a category');
+  if (emergencyContacts.length === 0) {
+    container.innerHTML = '';
+    noContactsMsg.classList.remove('hidden');
     return;
   }
 
+  noContactsMsg.classList.add('hidden');
+  container.innerHTML = emergencyContacts.map((contact, index) => `
+    <div class="card card-metallic" style="margin-bottom: 1rem;">
+      <div style="display: flex; justify-content: space-between; align-items: start;">
+        <div style="flex: 1;">
+          <h4 style="color: var(--color-bronze); margin: 0 0 0.5rem 0;">${contact.name}</h4>
+          <p style="color: var(--color-silver); font-size: 0.875rem; margin: 0.25rem 0;">📱 ${contact.phone}</p>
+          <p style="color: var(--color-silver); font-size: 0.875rem; margin: 0.25rem 0;">👤 ${contact.relationship}</p>
+        </div>
+        <button onclick="deleteContact(${index})" class="btn btn-danger" style="padding: 0.5rem 1rem;">
+          🗑️ Delete
+        </button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function handleAddContact(e) {
+  e.preventDefault();
+
+  const name = document.getElementById('contactName').value;
+  const phone = document.getElementById('contactPhone').value;
+  const relationship = document.getElementById('contactRelationship').value;
+
+  const newContact = { name, phone, relationship };
+  emergencyContacts.push(newContact);
+
   try {
+    await setDoc(doc(db, 'users', currentUser.uid), {
+      emergencyContacts: emergencyContacts
+    }, { merge: true });
+
+    document.getElementById('addContactForm').reset();
+    displayEmergencyContacts();
+    alert(`✓ Contact Added\n\n${name} will be notified during emergencies.`);
+  } catch (error) {
+    console.error('Error adding contact:', error);
+    emergencyContacts.pop();
+    alert('Error adding contact. Please try again.');
+  }
+}
+
+window.deleteContact = async function(index) {
+  if (!confirm(`Delete ${emergencyContacts[index].name}?`)) return;
+
+  emergencyContacts.splice(index, 1);
+
+  try {
+    await setDoc(doc(db, 'users', currentUser.uid), {
+      emergencyContacts: emergencyContacts
+    }, { merge: true });
+
+    displayEmergencyContacts();
+    alert('✓ Contact deleted');
+  } catch (error) {
+    console.error('Error deleting contact:', error);
+    alert('Error deleting contact. Please try again.');
+  }
+};
+
+// ==================== ALERT MY FAMILY ====================
+async function alertMyFamily() {
+  try {
+    // Load emergency contacts first
+    const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+    const contacts = userDoc.exists() ? (userDoc.data().emergencyContacts || []) : [];
+
+    if (contacts.length === 0) {
+      if (confirm('No emergency contacts found.\n\nWould you like to add some now?')) {
+        showScreen('emergencyContacts');
+        loadEmergencyContacts();
+      }
+      return;
+    }
+
+    if (!confirm(`⚠️ ALERT MY FAMILY\n\nThis will send SMS alerts to ${contacts.length} emergency contact(s):\n${contacts.map(c => `• ${c.name}`).join('\n')}\n\nContinue?`)) {
+      return;
+    }
+
     showLoading();
-    submitBtn.disabled = true;
-    submitBtn.textContent = 'Submitting Report...';
 
-    // Get Coordinates
+    // Get current location
     const location = await getCurrentLocation();
+    const address = await reverseGeocodeLocation(location.latitude, location.longitude);
 
-    // Create Incident with uploaded files
-    const incident = {
-      type: 'incident-report',
-      reportCategory: category,
-      reportDescription: description,
+    // Create family alert incident
+    const familyAlert = {
+      type: 'family-alert',
       status: 'pending',
-      priority: 'medium',
+      priority: 'high',
       userId: currentUser.uid,
       userEmail: currentUser.email,
-      userProfile: {
-        firstName: currentUser.displayName?.split(' ')[0] || '',
-        lastName: currentUser.displayName?.split(' ')[1] || '',
-        phone: currentUser.phoneNumber || ''
-      },
-      companyId: companyConfig.companyId,
+      emergencyContacts: contacts,
       location: {
         coordinates: {
           lat: location.latitude,
           lng: location.longitude,
           accuracy: location.accuracy
         },
-        address: await getAddressFromCoordinates(location.latitude, location.longitude),
+        address: address,
         timestamp: serverTimestamp()
       },
-      reportLocation: locationText,
-      attachments: reportUploadedFiles, // Use new upload array
-      timeline: [{
-        timestamp: new Date(),
-        action: 'report_submitted',
-        actor: 'client',
-        note: `Report submitted: ${category}`
-      }],
+      message: `EMERGENCY ALERT: ${currentUser.email} has activated Family Alert`,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     };
 
-    const docRef = await addDoc(collection(db, 'incidents'), incident);
+    await addDoc(collection(db, 'familyAlerts'), familyAlert);
 
-    // Reset form and upload state
-    document.getElementById('incidentReportForm').reset();
-    document.getElementById('filePreview').innerHTML = '';
-    document.getElementById('filePreview').classList.add('hidden');
-    reportUploadedFiles = []; // Reset uploaded files
-    selectedFiles = [];
-
-    alert('✓ Report submitted successfully');
-    showScreen('dashboard');
+    hideLoading();
+    alert(`✓ Family Alert Sent!\n\nYour emergency contacts have been notified:\n${contacts.map(c => `• ${c.name} (${c.phone})`).join('\n')}\n\nControl Room has also been alerted.`);
 
   } catch (error) {
-    console.error('Report error:', error);
-    showError('reportError', 'Error submitting report: ' + error.message);
-  } finally {
     hideLoading();
-    submitBtn.disabled = false;
-    submitBtn.textContent = 'Submit Report';
+    console.error('Error sending family alert:', error);
+    alert('Error sending family alert. Please call your contacts manually.');
   }
 }
 
-// Safety Tool Functions
-let liveLocationWatchId = null;
-let liveShareId = null;
+// ==================== LIVE LOCATION SHARING ====================
+let locationSharingActive = false;
+let locationInterval = null;
 
-async function handleLiveLocation() {
-  const btn = document.getElementById('liveLocationBtn');
+async function loadLocationStatus() {
+  const statusEl = document.getElementById('locationStatus');
+  const iconEl = document.getElementById('locationIcon');
+  const btn = document.getElementById('toggleLocationBtn');
 
-  if (liveLocationWatchId) {
-    // STOP SHARING
-    navigator.geolocation.clearWatch(liveLocationWatchId);
-    liveLocationWatchId = null;
-
-    if (liveShareId) {
-      await setDoc(doc(db, 'live_shares', liveShareId), {
-        active: false,
-        endedAt: serverTimestamp()
-      }, { merge: true });
-      liveShareId = null;
-    }
-
-    btn.innerHTML = '📍 SHARE LIVE LOCATION';
-    btn.style.background = 'linear-gradient(135deg, #004d40 0%, #000000 100%)';
-    btn.classList.remove('pulse-animation');
-    alert('Live location sharing stopped.');
-
+  if (locationSharingActive) {
+    statusEl.textContent = '🟢 Sharing location every 30 seconds';
+    statusEl.style.color = '#34C759';
+    iconEl.textContent = '📍✅';
+    btn.textContent = '🛑 STOP SHARING';
+    btn.style.background = '#FF3B30';
+    btn.style.color = '#fff';
+    btn.style.fontWeight = '700';
+    updateCurrentLocationDisplay();
   } else {
-    // START SHARING
-    if (!confirm('Start sharing your real-time location with the control room and emergency contacts?')) return;
-
-    try {
-      showLoading();
-
-      // Create share session
-      const shareDoc = await addDoc(collection(db, 'live_shares'), {
-        userId: currentUser.uid,
-        userEmail: currentUser.email,
-        startTime: serverTimestamp(),
-        active: true,
-        locations: []
-      });
-      liveShareId = shareDoc.id;
-
-      // Start watching
-      liveLocationWatchId = navigator.geolocation.watchPosition(
-        async (position) => {
-          const loc = {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-            accuracy: position.coords.accuracy,
-            timestamp: new Date()
-          };
-
-          // Update Firestore (append to array)
-          // Note: In a real app, we might overwrite the "current" location to save writes
-          // But for history, we append.
-          await setDoc(doc(db, 'live_shares', liveShareId), {
-            currentLocation: loc,
-            lastUpdated: serverTimestamp()
-          }, { merge: true });
-        },
-        (error) => console.error('Location watch error:', error),
-        { enableHighAccuracy: true }
-      );
-
-      hideLoading();
-      btn.innerHTML = '🛑 STOP SHARING LOCATION';
-      btn.style.background = 'linear-gradient(135deg, #b71c1c 0%, #000000 100%)';
-      btn.classList.add('pulse-animation');
-      alert('✅ Live location sharing ACTIVE. Control room can see you.');
-
-    } catch (error) {
-      hideLoading();
-      console.error('Live location error:', error);
-      alert('Error starting live location: ' + error.message);
-    }
+    statusEl.textContent = 'Not active';
+    statusEl.style.color = '#888';
+    iconEl.textContent = '📍';
+    btn.textContent = '📍 START SHARING LOCATION';
+    btn.style.background = '#D4AF37';
+    btn.style.color = '#000';
+    btn.style.fontWeight = '700';
   }
 }
 
-async function handleAlertFamily() {
-  if (!confirm('Send distress alert to your Emergency Contacts?')) return;
+async function toggleLiveLocation() {
+  if (locationSharingActive) {
+    // Stop sharing
+    locationSharingActive = false;
+    if (locationInterval) {
+      clearInterval(locationInterval);
+      locationInterval = null;
+    }
 
+    // Update Firebase
+    try {
+      await setDoc(doc(db, 'users', currentUser.uid), {
+        liveLocation: {
+          active: false,
+          stoppedAt: serverTimestamp()
+        }
+      }, { merge: true });
+    } catch (error) {
+      console.error('Error stopping location sharing:', error);
+    }
+
+    alert('✓ Location sharing stopped');
+    loadLocationStatus();
+  } else {
+    // Start sharing
+    if (!confirm('📍 Share Live Location\n\nControl Room will see your real-time GPS position every 30 seconds.\n\nThis is useful when:\n• Walking alone at night\n• Entering unfamiliar areas\n• During emergencies\n\nContinue?')) {
+      return;
+    }
+
+    locationSharingActive = true;
+    shareLocationNow(); // Share immediately
+
+    // Then share every 30 seconds
+    locationInterval = setInterval(shareLocationNow, 30000);
+
+    alert('✓ Location sharing started\n\nControl Room can now track your movement in real-time.');
+    loadLocationStatus();
+  }
+}
+
+async function shareLocationNow() {
   try {
-    showLoading();
     const location = await getCurrentLocation();
     const address = await reverseGeocodeLocation(location.latitude, location.longitude);
 
-    await addDoc(collection(db, 'family_alerts'), {
+    // Get user data to include account number
+    const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+    const userData = userDoc.data() || {};
+    const accountNumber = userData.accountNumber || 'Not Linked';
+
+    console.log('📍 Sharing location with account:', accountNumber);
+
+    await setDoc(doc(db, 'users', currentUser.uid), {
+      liveLocation: {
+        active: true,
+        userEmail: currentUser.email,
+        accountNumber: accountNumber,
+        coordinates: {
+          lat: location.latitude,
+          lng: location.longitude,
+          accuracy: location.accuracy
+        },
+        address: address,
+        timestamp: serverTimestamp()
+      }
+    }, { merge: true });
+
+    // Also add to location trail
+    await addDoc(collection(db, 'locationTrail'), {
+      userId: currentUser.uid,
+      userEmail: currentUser.email,
+      accountNumber: accountNumber,
+      coordinates: {
+        lat: location.latitude,
+        lng: location.longitude,
+        accuracy: location.accuracy
+      },
+      address: address,
+      timestamp: serverTimestamp()
+    });
+
+    updateCurrentLocationDisplay();
+    console.log('✓ Location shared:', address, '| Account:', accountNumber);
+  } catch (error) {
+    console.error('Error sharing location:', error);
+  }
+}
+
+async function updateCurrentLocationDisplay() {
+  const container = document.getElementById('currentLocationInfo');
+  try {
+    const location = await getCurrentLocation();
+    const address = await reverseGeocodeLocation(location.latitude, location.longitude);
+
+    container.innerHTML = `
+      <div style="color: var(--color-silver); font-size: 0.875rem; line-height: 1.6;">
+        <p style="margin: 0.5rem 0;"><strong style="color: var(--color-bronze);">📍 Address:</strong><br>${address}</p>
+        <p style="margin: 0.5rem 0;"><strong style="color: var(--color-bronze);">🌐 GPS:</strong><br>Lat: ${location.latitude.toFixed(6)}, Lng: ${location.longitude.toFixed(6)}</p>
+        <p style="margin: 0.5rem 0;"><strong style="color: var(--color-bronze);">🎯 Accuracy:</strong> ${Math.round(location.accuracy)}m</p>
+        <p style="margin: 0.5rem 0; color: var(--color-success);">✓ Last updated: ${new Date().toLocaleTimeString()}</p>
+      </div>
+    `;
+  } catch (error) {
+    container.innerHTML = `<p style="color: var(--color-danger);">Error getting location</p>`;
+  }
+}
+
+// ==================== ACCOUNT LINKING ====================
+async function linkAccount() {
+  // Create a custom dialog
+  const dialog = document.createElement('div');
+  dialog.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    padding: 20px;
+  `;
+
+  dialog.innerHTML = `
+    <div style="background: var(--color-dark); border: 2px solid var(--color-bronze); border-radius: 12px; padding: 24px; max-width: 400px; width: 100%;">
+      <h3 style="color: var(--color-bronze); margin: 0 0 8px 0; font-size: 1.25rem;">🔗 Link Your Account</h3>
+      <p style="color: var(--color-silver); margin: 0 0 16px 0; font-size: 0.875rem;">Enter your ABC Security account number:</p>
+      <p style="color: #888; margin: 0 0 16px 0; font-size: 0.75rem;">(e.g., ABC-12345)</p>
+      <input type="text" id="accountInput" placeholder="ABC-12345" style="width: 100%; padding: 12px; background: rgba(0,0,0,0.5); border: 1px solid var(--color-bronze); border-radius: 6px; color: var(--color-silver); font-size: 1rem; font-family: monospace; text-transform: uppercase; margin-bottom: 16px;" />
+      <div style="display: flex; gap: 8px;">
+        <button id="cancelBtn" style="flex: 1; padding: 12px; background: rgba(255,59,48,0.2); color: #FF3B30; border: 1px solid #FF3B30; border-radius: 6px; font-weight: 600; cursor: pointer;">Cancel</button>
+        <button id="confirmBtn" style="flex: 1; padding: 12px; background: var(--color-bronze); color: #000; border: none; border-radius: 6px; font-weight: 700; cursor: pointer;">OK</button>
+      </div>
+      <div id="linkError" style="color: #FF3B30; margin-top: 12px; font-size: 0.875rem; display: none;"></div>
+    </div>
+  `;
+
+  document.body.appendChild(dialog);
+
+  const input = dialog.querySelector('#accountInput');
+  const confirmBtn = dialog.querySelector('#confirmBtn');
+  const cancelBtn = dialog.querySelector('#cancelBtn');
+  const errorDiv = dialog.querySelector('#linkError');
+
+  // Focus input
+  setTimeout(() => input.focus(), 100);
+
+  // Handle cancel
+  cancelBtn.onclick = () => {
+    document.body.removeChild(dialog);
+  };
+
+  // Handle confirm
+  confirmBtn.onclick = async () => {
+    const accountNumber = input.value.trim().toUpperCase();
+
+    if (!accountNumber) {
+      errorDiv.textContent = 'Please enter an account number';
+      errorDiv.style.display = 'block';
+      return;
+    }
+
+    // Validate account number format
+    if (!accountNumber.match(/^ABC-\d{5}$/)) {
+      errorDiv.textContent = 'Invalid format. Must be: ABC-12345';
+      errorDiv.style.display = 'block';
+      return;
+    }
+
+    try {
+      confirmBtn.textContent = 'Linking...';
+      confirmBtn.disabled = true;
+
+      await setDoc(doc(db, 'users', currentUser.uid), {
+        accountNumber: accountNumber,
+        accountLinkedAt: serverTimestamp()
+      }, { merge: true });
+
+      // Update display
+      const accountNumberEl = document.getElementById('accountNumber');
+      if (accountNumberEl) {
+        accountNumberEl.textContent = accountNumber;
+        accountNumberEl.style.color = 'var(--color-success)';
+      }
+
+      // Close dialog
+      document.body.removeChild(dialog);
+
+      // Show success
+      alert(`✓ Account Linked!\n\nYour account ${accountNumber} has been successfully linked.\n\nControl Room can now identify you by your account number.`);
+
+      console.log('✓ Account linked successfully:', accountNumber);
+
+    } catch (error) {
+      console.error('Error linking account:', error);
+      errorDiv.textContent = 'Error linking account. Please try again.';
+      errorDiv.style.display = 'block';
+      confirmBtn.textContent = 'OK';
+      confirmBtn.disabled = false;
+    }
+  };
+
+  // Handle Enter key
+  input.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      confirmBtn.click();
+    }
+  });
+}
+
+// ==================== SAFETY CHECK-IN ====================
+let checkInActive = false;
+let checkInTimer = null;
+let checkInTimeout = null;
+
+async function loadCheckInStatus() {
+  const statusEl = document.getElementById('checkInStatus');
+  const iconEl = document.getElementById('checkInIcon');
+  const btn = document.getElementById('toggleCheckInBtn');
+
+  if (checkInActive) {
+    const interval = document.getElementById('checkInInterval').value;
+    statusEl.textContent = `🟢 Active - Checking every ${interval} min`;
+    iconEl.textContent = '✅';
+    btn.textContent = '🛑 Stop Check-In';
+    btn.style.background = 'var(--color-danger)';
+    btn.style.color = '#fff';
+  } else {
+    statusEl.textContent = 'Inactive';
+    iconEl.textContent = '⏸️';
+    btn.textContent = '🟢 Start Check-In';
+    btn.style.background = 'var(--color-success)';
+    btn.style.color = '#fff';
+  }
+}
+
+async function toggleCheckIn() {
+  if (checkInActive) {
+    // Stop check-in
+    checkInActive = false;
+    if (checkInTimer) clearInterval(checkInTimer);
+    if (checkInTimeout) clearTimeout(checkInTimeout);
+    checkInTimer = null;
+    checkInTimeout = null;
+
+    try {
+      await setDoc(doc(db, 'users', currentUser.uid), {
+        safetyCheckIn: {
+          active: false,
+          stoppedAt: serverTimestamp()
+        }
+      }, { merge: true });
+    } catch (error) {
+      console.error('Error stopping check-in:', error);
+    }
+
+    alert('✓ Safety check-in stopped');
+    loadCheckInStatus();
+  } else {
+    // Start check-in
+    const interval = parseInt(document.getElementById('checkInInterval').value);
+    const gracePeriod = parseInt(document.getElementById('checkInGracePeriod').value);
+
+    if (!confirm(`✓ Start Safety Check-In\n\nYou will be asked to check in every ${interval} minutes.\n\nIf you don't respond within ${gracePeriod} minutes, an alert will be sent to Control Room and your emergency contacts.\n\nContinue?`)) {
+      return;
+    }
+
+    checkInActive = true;
+
+    // Start check-in timer
+    checkInTimer = setInterval(() => {
+      requestCheckIn(gracePeriod);
+    }, interval * 60 * 1000);
+
+    try {
+      await setDoc(doc(db, 'users', currentUser.uid), {
+        safetyCheckIn: {
+          active: true,
+          interval: interval,
+          gracePeriod: gracePeriod,
+          startedAt: serverTimestamp()
+        }
+      }, { merge: true });
+    } catch (error) {
+      console.error('Error starting check-in:', error);
+    }
+
+    alert(`✓ Safety check-in started\n\nYou'll receive your first check-in notification in ${interval} minutes.`);
+    loadCheckInStatus();
+  }
+}
+
+function requestCheckIn(gracePeriod) {
+  const response = confirm('✓ SAFETY CHECK-IN\n\nAre you safe?\n\nPress OK to confirm you are safe.\n\nIf you do not respond within ${gracePeriod} minutes, an alert will be sent.');
+
+  if (response) {
+    // User confirmed safety
+    recordCheckIn(true);
+  } else {
+    // User needs help or timeout
+    checkInTimeout = setTimeout(() => {
+      sendCheckInAlert();
+    }, gracePeriod * 60 * 1000);
+  }
+}
+
+async function recordCheckIn(safe) {
+  try {
+    await addDoc(collection(db, 'checkIns'), {
+      userId: currentUser.uid,
+      userEmail: currentUser.email,
+      safe: safe,
+      timestamp: serverTimestamp()
+    });
+
+    if (safe) {
+      console.log('✓ Check-in recorded: User is safe');
+    }
+  } catch (error) {
+    console.error('Error recording check-in:', error);
+  }
+}
+
+async function sendCheckInAlert() {
+  try {
+    const location = await getCurrentLocation();
+    const address = await reverseGeocodeLocation(location.latitude, location.longitude);
+
+    const alert = {
+      type: 'missed-checkin',
+      status: 'pending',
+      priority: 'critical',
       userId: currentUser.uid,
       userEmail: currentUser.email,
       location: {
-        lat: location.latitude,
-        lng: location.longitude,
-        address: address
+        coordinates: {
+          lat: location.latitude,
+          lng: location.longitude,
+          accuracy: location.accuracy
+        },
+        address: address,
+        timestamp: serverTimestamp()
       },
-      timestamp: serverTimestamp(),
-      status: 'sent'
-    });
+      message: 'User failed to respond to safety check-in',
+      createdAt: serverTimestamp()
+    };
 
-    hideLoading();
-    alert('✅ Distress alert sent to all emergency contacts!');
+    await addDoc(collection(db, 'incidents'), alert);
 
+    alert('⚠️ MISSED CHECK-IN ALERT SENT\n\nControl Room and your emergency contacts have been notified that you did not respond to your safety check-in.');
   } catch (error) {
-    hideLoading();
-    console.error('Family alert error:', error);
-    alert('Error sending alert: ' + error.message);
+    console.error('Error sending check-in alert:', error);
   }
 }
-
-function handleSafetyCheck() {
-  alert('⏱️ Safety Check-in\n\nThis feature will allow you to set a timer (e.g. 30 mins). If you don\'t check in before it expires, an alert will be sent automatically.\n\n(Coming in next update)');
-}
-
-function handleManageContacts() {
-  alert('👥 Manage Contacts\n\nHere you will be able to add email/phone numbers for family members to receive alerts.\n\n(Coming in next update)');
-}
-
-// ==================== FILE UPLOAD FUNCTIONS ====================
-
-/**
- * Handle file selection for incident report form
- */
-async function handleReportFileSelection(files) {
-  const maxSize = 100 * 1024 * 1024; // 100MB
-  const validTypes = ['image/jpeg', 'image/png', 'image/heic', 'video/mp4', 'video/quicktime'];
-
-  for (const file of files) {
-    // Validate file size
-    if (file.size > maxSize) {
-      showMessage(`File "${file.name}" is too large. Maximum size is 100MB.`, 'error');
-      continue;
-    }
-
-    // Validate file type
-    if (!validTypes.includes(file.type)) {
-      showMessage(`File "${file.name}" is not a supported format.`, 'error');
-      continue;
-    }
-
-    try {
-      // Upload to Firebase Storage
-      const downloadURL = await uploadFileToStorage(file, 'report', null);
-
-      // Add to uploaded files array
-      reportUploadedFiles.push({
-        name: file.name,
-        url: downloadURL,
-        type: file.type.startsWith('image/') ? 'image' : 'video',
-        size: file.size,
-        uploadedAt: new Date()
-      });
-
-      // Update preview
-      displayReportFilePreview();
-
-    } catch (error) {
-      console.error('Error uploading file:', error);
-      showMessage(`Failed to upload "${file.name}": ${error.message}`, 'error');
-    }
-  }
-}
-
-/**
- * Handle file upload for active incident tracking screen
- */
-async function handleIncidentFileUpload(files) {
-  if (!currentIncident) {
-    showMessage('No active incident to attach files to', 'error');
-    return;
-  }
-
-  const maxSize = 100 * 1024 * 1024; // 100MB
-  const validTypes = ['image/jpeg', 'image/png', 'image/heic', 'video/mp4', 'video/quicktime'];
-
-  for (const file of files) {
-    // Validate file size
-    if (file.size > maxSize) {
-      showMessage(`File "${file.name}" is too large. Maximum size is 100MB.`, 'error');
-      continue;
-    }
-
-    // Validate file type
-    if (!validTypes.includes(file.type)) {
-      showMessage(`File "${file.name}" is not a supported format.`, 'error');
-      continue;
-    }
-
-    try {
-      // Upload to Firebase Storage
-      const downloadURL = await uploadFileToStorage(file, 'incident', currentIncident);
-
-      // Add to uploaded files array
-      const fileData = {
-        name: file.name,
-        url: downloadURL,
-        type: file.type.startsWith('image/') ? 'image' : 'video',
-        size: file.size,
-        uploadedAt: new Date()
-      };
-
-      incidentUploadedFiles.push(fileData);
-
-      // Update Firestore with new attachment
-      const incidentRef = doc(db, 'incidents', currentIncident);
-      const incidentDoc = await getDoc(incidentRef);
-      const existingAttachments = incidentDoc.data().attachments || [];
-
-      await setDoc(incidentRef, {
-        attachments: [...existingAttachments, fileData],
-        updatedAt: serverTimestamp()
-      }, { merge: true });
-
-      // Update preview
-      displayIncidentFilePreview();
-      showMessage(`File "${file.name}" uploaded successfully!`, 'success');
-
-    } catch (error) {
-      console.error('Error uploading file:', error);
-      showMessage(`Failed to upload "${file.name}": ${error.message}`, 'error');
-    }
-  }
-}
-
-/**
- * Upload file to Firebase Storage with progress tracking
- */
-function uploadFileToStorage(file, context, incidentId) {
-  return new Promise((resolve, reject) => {
-    try {
-      // Create storage reference
-      const userId = currentUser?.uid || 'anonymous';
-      let storagePath;
-
-      if (context === 'report') {
-        storagePath = `report/${userId}/${Date.now()}_${file.name}`;
-      } else if (context === 'incident' && incidentId) {
-        storagePath = `incidents/${incidentId}/${Date.now()}_${file.name}`;
-      } else {
-        storagePath = `uploads/${userId}/${Date.now()}_${file.name}`;
-      }
-
-      const storageRef = ref(storage, storagePath);
-      const uploadTask = uploadBytesResumable(storageRef, file);
-
-      // Get progress elements
-      const progressContainer = context === 'report'
-        ? document.getElementById('reportUploadProgress')
-        : document.getElementById('incidentUploadProgress');
-      const progressBar = context === 'report'
-        ? document.getElementById('reportProgressBar')
-        : document.getElementById('incidentProgressBar');
-      const progressText = context === 'report'
-        ? document.getElementById('reportProgressText')
-        : document.getElementById('incidentProgressText');
-
-      if (progressContainer) progressContainer.classList.remove('hidden');
-
-      // Monitor upload progress
-      uploadTask.on('state_changed',
-        (snapshot) => {
-          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          if (progressBar) progressBar.style.width = progress + '%';
-          if (progressText) progressText.textContent = `Uploading ${file.name}: ${Math.round(progress)}%`;
-        },
-        (error) => {
-          console.error('Upload error:', error);
-          if (progressContainer) progressContainer.classList.add('hidden');
-          reject(error);
-        },
-        async () => {
-          // Upload completed successfully
-          try {
-            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-            if (progressContainer) progressContainer.classList.add('hidden');
-            resolve(downloadURL);
-          } catch (error) {
-            reject(error);
-          }
-        }
-      );
-
-    } catch (error) {
-      reject(error);
-    }
-  });
-}
-
-/**
- * Display file preview for report form
- */
-function displayReportFilePreview() {
-  const previewContainer = document.getElementById('filePreview');
-  if (!previewContainer) return;
-
-  previewContainer.innerHTML = '';
-  previewContainer.classList.remove('hidden');
-
-  reportUploadedFiles.forEach((file, index) => {
-    const fileCard = document.createElement('div');
-    fileCard.style.cssText = 'position: relative; width: 100px; height: 100px; border-radius: 8px; overflow: hidden; background: #222;';
-
-    if (file.type === 'image') {
-      fileCard.innerHTML = `
-        <img src="${file.url}" style="width: 100%; height: 100%; object-fit: cover;">
-        <button onclick="removeReportFile(${index})" style="position: absolute; top: 5px; right: 5px; background: rgba(255,59,48,0.9); color: white; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-size: 16px; line-height: 1;">×</button>
-      `;
-    } else {
-      fileCard.innerHTML = `
-        <div style="display: flex; align-items: center; justify-content: center; height: 100%; font-size: 40px;">🎥</div>
-        <button onclick="removeReportFile(${index})" style="position: absolute; top: 5px; right: 5px; background: rgba(255,59,48,0.9); color: white; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-size: 16px; line-height: 1;">×</button>
-      `;
-    }
-
-    previewContainer.appendChild(fileCard);
-  });
-}
-
-/**
- * Display file preview for incident tracking screen
- */
-function displayIncidentFilePreview() {
-  const previewContainer = document.getElementById('incidentFilePreview');
-  if (!previewContainer) return;
-
-  previewContainer.innerHTML = '';
-  previewContainer.classList.remove('hidden');
-
-  incidentUploadedFiles.forEach((file) => {
-    const fileCard = document.createElement('div');
-    fileCard.style.cssText = 'width: 100px; height: 100px; border-radius: 8px; overflow: hidden; background: #222;';
-
-    if (file.type === 'image') {
-      fileCard.innerHTML = `<img src="${file.url}" style="width: 100%; height: 100%; object-fit: cover;">`;
-    } else {
-      fileCard.innerHTML = `<div style="display: flex; align-items: center; justify-content: center; height: 100%; font-size: 40px;">🎥</div>`;
-    }
-
-    previewContainer.appendChild(fileCard);
-  });
-}
-
-/**
- * Remove file from report upload array
- */
-window.removeReportFile = function (index) {
-  reportUploadedFiles.splice(index, 1);
-  displayReportFilePreview();
-
-  if (reportUploadedFiles.length === 0) {
-    const previewContainer = document.getElementById('filePreview');
-    if (previewContainer) previewContainer.classList.add('hidden');
-  }
-};
-
 
 // Initialize app when DOM is ready
 if (document.readyState === 'loading') {

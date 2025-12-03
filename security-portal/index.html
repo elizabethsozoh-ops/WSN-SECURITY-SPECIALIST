@@ -354,7 +354,7 @@
             <div class="logo-main" style="font-size: 1.5rem; margin-bottom: 10px;">ABC SECURITY</div>
             <div class="logo-sub" style="margin-bottom: 30px;">Control Room Access</div>
 
-            <input type="email" id="adminEmail" class="login-input" placeholder="Admin Email Address">
+            <input type="email" id="adminEmailInput" class="login-input" placeholder="Admin Email Address">
             <input type="password" id="adminPassword" class="login-input" placeholder="Password"
                 onkeyup="checkEnter(event)">
             <button class="btn btn-primary" style="width: 100%" onclick="attemptLogin()">Control Room Sign In</button>
@@ -388,6 +388,15 @@
                 <div class="status-bar">
                     <div class="status-dot"></div>
                     <span id="connectionStatus">System Online • Monitoring Active</span>
+                </div>
+
+                <!-- Live Location Tracking Panel -->
+                <div id="liveTrackingPanel" style="background: rgba(0,122,255,0.2); border: 2px solid #007AFF; border-radius: 8px; padding: 12px; margin-top: 15px; display: none;">
+                    <div style="font-size: 0.75rem; color: #007AFF; font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                        <span style="animation: pulse 2s infinite;">📍</span>
+                        LIVE TRACKING ACTIVE
+                    </div>
+                    <div id="liveTrackingList" style="font-size: 0.85rem; color: var(--color-secondary);"></div>
                 </div>
             </div>
 
@@ -801,7 +810,7 @@
                     typeLabel = 'INCIDENT REPORT';
                     break;
                 case 'technical':
-                    typeColor = '#D4AF37';
+                    typeColor = '#9ca3af';
                     typeLabel = 'TECHNICAL DEPARTMENT';
                     break;
                 case 'family-alert':
@@ -1179,7 +1188,7 @@
         };
 
         window.attemptLogin = async () => {
-            const email = document.getElementById('adminEmail').value;
+            const email = document.getElementById('adminEmailInput').value;
             const password = document.getElementById('adminPassword').value;
             const errorElement = document.getElementById('loginError');
 
@@ -1487,13 +1496,29 @@
 
             onSnapshot(usersRef, (snapshot) => {
                 console.log('📍 Live location listener triggered, checking', snapshot.size, 'users');
+
+                let activeTrackers = [];
+
                 snapshot.forEach((doc) => {
                     const userData = doc.data();
                     const userId = doc.id;
 
                     if (userData.liveLocation && userData.liveLocation.active) {
+                        // Skip admin users - don't track security officers
+                        if (userData.role === 'admin') {
+                            console.log('⏭️ Skipping admin user:', userData.liveLocation.userEmail);
+                            return;
+                        }
+
                         console.log('✅ User sharing location:', userData.liveLocation.userEmail || userId, userData.liveLocation);
                         updateLiveLocationMarker(userId, userData);
+
+                        // Add to active trackers list
+                        activeTrackers.push({
+                            email: userData.liveLocation.userEmail || 'Unknown',
+                            account: userData.liveLocation.accountNumber || 'Not Linked',
+                            address: userData.liveLocation.address || 'No address'
+                        });
                     } else {
                         // Remove marker if user stopped sharing
                         if (liveLocationMarkers[userId]) {
@@ -1507,6 +1532,9 @@
                         }
                     }
                 });
+
+                // Update live tracking panel
+                updateLiveTrackingPanel(activeTrackers);
             });
 
             // Listen for location trail updates
@@ -1525,6 +1553,26 @@
             });
         }
 
+        function updateLiveTrackingPanel(activeTrackers) {
+            const panel = document.getElementById('liveTrackingPanel');
+            const list = document.getElementById('liveTrackingList');
+
+            if (activeTrackers.length === 0) {
+                panel.style.display = 'none';
+                return;
+            }
+
+            panel.style.display = 'block';
+
+            list.innerHTML = activeTrackers.map(tracker => `
+                <div style="background: rgba(0,0,0,0.3); border-radius: 6px; padding: 8px; margin-bottom: 6px;">
+                    <div style="color: #34C759; font-weight: 600;">📱 ${tracker.email}</div>
+                    <div style="font-size: 0.75rem; color: var(--color-primary);">Account: ${tracker.account}</div>
+                    <div style="font-size: 0.75rem; color: #888; margin-top: 2px;">${tracker.address}</div>
+                </div>
+            `).join('');
+        }
+
         function updateLiveLocationMarker(userId, userData) {
             const coords = userData.liveLocation.coordinates;
             if (!coords) {
@@ -1538,11 +1586,12 @@
             console.log('📍 Creating/updating marker at:', lat, lng, 'for user:', userData.liveLocation.userEmail);
 
             // Create or update marker
+            const isNewMarker = !liveLocationMarkers[userId];
             if (liveLocationMarkers[userId]) {
                 console.log('🔄 Updating existing marker');
                 liveLocationMarkers[userId].setLatLng([lat, lng]);
             } else {
-                console.log('✨ Creating new marker');
+                console.log('✨ Creating new marker - NEW USER STARTED SHARING LOCATION');
                 const liveIcon = L.divIcon({
                     html: `<div style="background: #007AFF; width: 24px; height: 24px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 20px rgba(0,122,255,0.8); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 12px; animation: pulse 2s infinite;">📍</div>`,
                     className: '',
@@ -1569,6 +1618,22 @@
 
                 liveLocationMarkers[userId] = marker;
                 console.log('✅ Marker created successfully for account:', initAccountNumber);
+
+                // Play notification sound for NEW location sharing
+                try {
+                    if (!audioContext) {
+                        initAudioSystem();
+                    }
+                    playIncidentReportBeep();
+                    console.log('🔊 BEEP SOUND PLAYED');
+                } catch (error) {
+                    console.warn('❌ Could not play sound:', error);
+                }
+
+                // Visual notification in console
+                console.log('%c🚨 NEW LIVE LOCATION TRACKING STARTED', 'background: #007AFF; color: white; font-size: 16px; padding: 10px; border-radius: 5px;');
+                console.log('%cAccount: ' + initAccountNumber, 'color: #34C759; font-weight: bold; font-size: 14px;');
+                console.log('%cEmail: ' + (userData.liveLocation.userEmail || 'Unknown'), 'color: #007AFF; font-size: 14px;');
             }
 
             // Update popup with account number from liveLocation
